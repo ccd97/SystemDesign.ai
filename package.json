@@ -1,0 +1,78 @@
+{
+  "name": "excalidraw-interaction-recorder",
+  "version": "0.1.0",
+  "description": "Desktop app for recording Excalidraw interactions.",
+  "private": true,
+  "type": "module",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.node.json && vite build",
+    "icon": "python3 scripts/create-mac-icon.py",
+    "icon:mac": "npm run icon",
+    "pack:mac": "npm run icon && npm run build && electron-builder --mac --dir",
+    "dist:mac": "npm run icon && npm run build && electron-builder --mac",
+    "pack:linux": "npm run icon && npm run build && electron-builder --linux --dir",
+    "dist:linux": "npm run icon && npm run build && electron-builder --linux AppImage tar.xz",
+    "dist:linux:pacman": "npm run icon && npm run build && electron-builder --linux pacman",
+    "install:mac": "npm run pack:mac && rm -rf \"/Applications/Excalidraw Recorder.app\" && cp -R \"release/mac-arm64/Excalidraw Recorder.app\" \"/Applications/\" && rm -rf \"release/mac-arm64\"",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@excalidraw/excalidraw": "^0.18.1",
+    "@radix-ui/react-collapsible": "^1.1.13",
+    "@radix-ui/react-dialog": "^1.1.16",
+    "@radix-ui/react-scroll-area": "^1.2.11",
+    "@radix-ui/react-slot": "^1.2.5",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.18.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwind-merge": "^3.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "^4.7.0",
+    "electron": "^31.7.7",
+    "electron-builder": "^26.15.3",
+    "typescript": "^5.9.3",
+    "vite": "^5.4.21",
+    "vite-plugin-electron": "^0.28.8"
+  },
+  "build": {
+    "appId": "com.local.excalidraw-recorder",
+    "productName": "Excalidraw Recorder",
+    "directories": {
+      "output": "release"
+    },
+    "artifactName": "${productName}-${version}-${arch}.${ext}",
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "build/icon.png",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "identity": null
+    },
+    "linux": {
+      "category": "Utility",
+      "icon": "build/icon.png",
+      "target": [
+        "AppImage",
+        "tar.xz"
+      ]
+    },
+    "dmg": {
+      "artifactName": "${productName}-${version}-${arch}.${ext}"
+    }
+  }
+}
