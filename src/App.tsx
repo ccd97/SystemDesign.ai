@@ -102,7 +102,7 @@ function AppContent() {
   const [pendingSwitch, setPendingSwitch] = useState<CanvasMeta>();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(initialCollapsed);
   const [isRecording, setIsRecording] = useState(false);
-  const [eventCount, setEventCount] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
   const [durationMs, setDurationMs] = useState(0);
   const [loading, setLoading] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -224,7 +224,7 @@ function AppContent() {
     const interval = window.setInterval(() => {
       const startedAtMs = recorderRef.current.startedAtMs;
       if (startedAtMs) {
-        setDurationMs(Date.now() - startedAtMs);
+        setDurationMs(Date.now() - startedAtMs - recorderRef.current.totalPausedMs);
       }
     }, 250);
 
@@ -263,10 +263,7 @@ function AppContent() {
       },
       files,
     };
-    const events = recorderRef.current.recordChange(sceneRef.current);
-    if (recorderRef.current.isRecording) {
-      setEventCount(events.length);
-    }
+    recorderRef.current.recordChange(sceneRef.current);
     scheduleSave();
   }
 
@@ -290,15 +287,25 @@ function AppContent() {
     }
     await recorderRef.current.start(activeCanvas.id, activeCanvas.name, sceneRef.current, settings.enableAudioRecording);
     setIsRecording(true);
-    setEventCount(0);
+    setIsPaused(false);
     setDurationMs(0);
     setLastSession(undefined);
+  }
+
+  function handlePause() {
+    recorderRef.current.pause();
+    setIsPaused(true);
+  }
+
+  function handleResume() {
+    recorderRef.current.resume();
+    setIsPaused(false);
   }
 
   async function stopRecording() {
     const session = await recorderRef.current.stop(sceneRef.current);
     setIsRecording(false);
-    setEventCount(0);
+    setIsPaused(false);
     setDurationMs(0);
     if (session) {
       if (chatbotState.messages.length > 0) {
@@ -327,9 +334,7 @@ function AppContent() {
           setSelectedRecording((prev) =>
             prev?.sessionId === session.sessionId ? updated : prev,
           );
-        }).catch((err) => {
-          console.error("Transcription failed:", err);
-        });
+        }).catch(() => {});
       }
       await refreshRecordings(session.canvasId);
     }
@@ -559,9 +564,9 @@ function AppContent() {
         await handleChatbotSend(text.trim(), "voice");
       }
     } catch (err) {
-      console.error("Voice transcription failed:", err);
       setChatbotState(prev => ({
         ...prev,
+        isTranscribing: false,
         error: err instanceof Error ? err.message : "Voice transcription failed",
       }));
     } finally {
@@ -607,15 +612,15 @@ function AppContent() {
           </div>
         <Toolbar
           isRecording={isRecording}
-          eventCount={eventCount}
+          isPaused={isPaused}
           durationMs={durationMs}
           theme={activeTheme}
           hasRecording={Boolean(lastSession)}
           onThemeChange={handleThemeChange}
           onStart={handleStartRecording}
+          onPause={handlePause}
+          onResume={handleResume}
           onStop={() => void stopRecording()}
-          onCopy={() => void copyLastSession()}
-          onDownload={() => void downloadLastSession()}
           onJudge={() => void handleJudge()}
           judgeStatus={judgeStatus}
           enableJudge={settings.enableJudge}

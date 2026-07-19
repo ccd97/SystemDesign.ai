@@ -64,22 +64,4 @@ export function summarizeDraft(
   }
 }
 
-export function makeNarrative(events: InteractionEvent[]) {
-  if (events.length === 0) {
-    return "The recording did not capture any drawing changes.";
-  }
 
-  const actionCounts = events.reduce<Record<string, number>>((counts, event) => {
-    counts[event.action] = (counts[event.action] ?? 0) + 1;
-    return counts;
-  }, {});
-  const actionSummary = Object.entries(actionCounts)
-    .map(([action, count]) => `${count} ${action.replaceAll("_", " ")}`)
-    .join(", ");
-
-  const firstEvents = events.slice(0, 4).map((event) => event.summary);
-  const continuation = events.length > firstEvents.length ? " Additional edits followed." : "";
-  return `This session recorded ${events.length} semantic event${
-    events.length === 1 ? "" : "s"
-  }: ${actionSummary}. It began with ${firstEvents.join("; ")}.${continuation}`;
-}

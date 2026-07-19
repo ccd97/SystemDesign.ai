@@ -21,6 +21,8 @@ type ActiveSession = {
   startedAtMs: number;
   events: InternalInteractionEvent[];
   audioFailed?: boolean;
+  pausedAtMs?: number;
+  totalPausedMs: number;
 };
 
 const SNAPSHOT_INTERVAL = 10;
@@ -71,7 +73,7 @@ function addValue(
   }
 
   const value = options.round ? rounded(source[key]) : source[key];
-  if (value === undefined || value === null) {
+  if (value == null) {
     return;
   }
 
@@ -182,12 +184,22 @@ export class Recorder {
     return Boolean(this.activeSession);
   }
 
+  get isPaused() {
+    return Boolean(this.activeSession?.pausedAtMs);
+  }
+
   get eventCount() {
     return this.activeSession?.events.length ?? 0;
   }
 
   get startedAtMs() {
     return this.activeSession?.startedAtMs;
+  }
+
+  get totalPausedMs() {
+    if (!this.activeSession) return 0;
+    const currentPauseMs = this.activeSession.pausedAtMs ? Date.now() - this.activeSession.pausedAtMs : 0;
+    return this.activeSession.totalPausedMs + currentPauseMs;
   }
 
   setBaseline(scene: SceneInput) {
@@ -203,6 +215,7 @@ export class Recorder {
       startedAt: new Date(now).toISOString(),
       startedAtMs: now,
       events: [],
+      totalPausedMs: 0,
     };
     this.previousSnapshot = snapshot(scene);
 
@@ -221,7 +234,7 @@ export class Recorder {
 
   recordChange(scene: SceneInput) {
     const currentSnapshot = snapshot(scene);
-    if (!this.activeSession) {
+    if (!this.activeSession || this.activeSession.pausedAtMs) {
       this.previousSnapshot = currentSnapshot;
       return [];
     }
@@ -241,6 +254,17 @@ export class Recorder {
     ]);
     this.previousSnapshot = currentSnapshot;
     return this.activeSession.events;
+  }
+
+  pause(): void {
+    if (!this.activeSession || this.activeSession.pausedAtMs) return;
+    this.activeSession.pausedAtMs = Date.now();
+  }
+
+  resume(): void {
+    if (!this.activeSession || !this.activeSession.pausedAtMs) return;
+    this.activeSession.totalPausedMs += Date.now() - this.activeSession.pausedAtMs;
+    this.activeSession.pausedAtMs = undefined;
   }
 
   recordCustomEvent(action: RecordedAction, summary: string): void {
@@ -275,6 +299,10 @@ export class Recorder {
     }
 
     const endedAtMs = Date.now();
+    const pausedMs = this.activeSession.pausedAtMs
+      ? endedAtMs - this.activeSession.pausedAtMs
+      : 0;
+    const totalPausedMs = this.activeSession.totalPausedMs + pausedMs;
     const events = compactEvents(this.activeSession.events);
     const session: RecordingSession & { audioBlob?: Blob; audioChunks?: AudioChunk[] } = {
       schemaVersion: "1.3",
@@ -284,11 +312,15 @@ export class Recorder {
       canvasName: this.activeSession.canvasName,
       startedAt: this.activeSession.startedAt,
       endedAt: new Date(endedAtMs).toISOString(),
-      durationMs: endedAtMs - this.activeSession.startedAtMs,
+      durationMs: endedAtMs - this.activeSession.startedAtMs - totalPausedMs,
       eventCount: events.length,
       events,
       finalScene: {
         elements: compactSceneElements(scene.elements),
+        appState: {
+          viewBackgroundColor: String(scene.appState?.viewBackgroundColor || "#ffffff"),
+          theme: String(scene.appState?.theme || "dark"),
+        },
       },
       hasAudio: Boolean(audioBlob),
       audioMimeType: audioBlob?.type,

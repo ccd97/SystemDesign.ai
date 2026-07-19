@@ -151,8 +151,8 @@ async function listRecordings(canvasId) {
     await mkdir(recordingsDir(canvasId), { recursive: true });
     const { readdir } = await import("node:fs/promises");
     const entries = await readdir(recordingsDir(canvasId), { withFileTypes: true });
-    const summaries = await Promise.all(entries
-        .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+    const results = await Promise.allSettled(entries
+        .filter((entry) => entry.isFile() && entry.name.endsWith(".json") && !entry.name.includes(".judge."))
         .map(async (entry) => {
         const raw = await readFile(path.join(recordingsDir(canvasId), entry.name), "utf8");
         const session = JSON.parse(raw);
@@ -166,6 +166,9 @@ async function listRecordings(canvasId) {
             eventCount: session.eventCount,
         };
     }));
+    const summaries = results
+        .filter((r) => r.status === "fulfilled")
+        .map((r) => r.value);
     return summaries.sort((left, right) => new Date(right.startedAt).getTime() - new Date(left.startedAt).getTime());
 }
 async function loadRecording(canvasId, sessionId) {

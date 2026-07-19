@@ -25,7 +25,4 @@ export class VoiceInput {
     return segments.map((s) => s.text).join(" ");
   }
 
-  cancelListening(): void {
-    this.audioRecorder.discard();
-  }
 }

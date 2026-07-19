@@ -36,7 +36,7 @@ export async function generateQuestion(
   model: string,
   options?: GenerateQuestionOptions,
 ): Promise<{ title: string; full: string }> {
-  const selectedDomain = options?.domain !== undefined ? options.domain : pickDomain();
+  const selectedDomain = options?.domain != null ? options.domain : pickDomain();
 
   const contextBlock = options?.context
     ? `\n\nAdditional user context/hint: "${options.context}"\nIncorporate this into the question where relevant.`

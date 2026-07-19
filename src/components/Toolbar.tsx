@@ -1,4 +1,4 @@
-import { Activity, Copy, Download, Loader2, Moon, Radio, Scale, Sparkles, Square, Sun, Timer } from "lucide-react";
+import { Circle, Loader2, Moon, Pause, Scale, Sparkles, Square, Sun, Timer } from "lucide-react";
 import type { CanvasTheme } from "../canvas/CanvasStore";
 import type { JudgeStatus } from "../judge/runJudge";
 import type { QuestionGenStatus } from "../questions/types";
@@ -6,15 +6,15 @@ import { Button } from "./ui/button";
 
 type ToolbarProps = {
   isRecording: boolean;
-  eventCount: number;
+  isPaused: boolean;
   durationMs: number;
   theme: CanvasTheme;
   hasRecording: boolean;
   onThemeChange: (theme: CanvasTheme) => void;
   onStart: () => void;
+  onPause: () => void;
+  onResume: () => void;
   onStop: () => void;
-  onCopy: () => void;
-  onDownload: () => void;
   onJudge: () => void;
   judgeStatus: JudgeStatus;
   enableJudge: boolean;
@@ -34,15 +34,15 @@ function formatDuration(ms: number) {
 
 export function Toolbar({
   isRecording,
-  eventCount,
+  isPaused,
   durationMs,
   theme,
   hasRecording,
   onThemeChange,
   onStart,
+  onPause,
+  onResume,
   onStop,
-  onCopy,
-  onDownload,
   onJudge,
   judgeStatus,
   enableJudge,
@@ -102,64 +102,53 @@ export function Toolbar({
         role="group"
         aria-label="Recording controls"
       >
-        <span
-          className="recording-state-dot"
-          aria-label={isRecording ? "Recording" : "Ready"}
-          title={isRecording ? "Recording" : "Ready"}
-        />
         <span className="metric-pill" title="Duration">
           <Timer aria-hidden="true" size={13} />
           <span>{formatDuration(durationMs)}</span>
         </span>
-        <span className="metric-pill" title="Recorded events">
-          <Activity aria-hidden="true" size={13} />
-          <span>{eventCount}</span>
-        </span>
         <div className="toolbar-actions">
           {isRecording ? (
-            <Button
-              type="button"
-              variant="destructive"
-              size="icon"
-              onClick={onStop}
-              aria-label="Stop recording"
-              title="Stop recording"
-            >
-              <Square aria-hidden="true" size={14} />
-            </Button>
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={isPaused ? onResume : onPause}
+                aria-label={isPaused ? "Resume recording" : "Pause recording"}
+                title={isPaused ? "Resume recording" : "Pause recording"}
+                className="recording-active-button"
+              >
+                {isPaused ? (
+                  <Circle aria-hidden="true" size={12} fill="currentColor" />
+                ) : (
+                  <Pause aria-hidden="true" size={14} />
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={onStop}
+                aria-label="Stop recording"
+                title="Stop recording"
+                className="stop-button"
+              >
+                <Square aria-hidden="true" size={12} fill="currentColor" />
+              </Button>
+            </>
           ) : (
             <Button
               type="button"
+              variant="ghost"
               size="icon"
               onClick={onStart}
               aria-label="Start recording"
               title="Start recording"
+              className="record-button"
             >
-              <Radio aria-hidden="true" size={14} />
+              <Circle aria-hidden="true" size={12} fill="currentColor" />
             </Button>
           )}
-          <Button
-            type="button"
-            variant="secondary"
-            size="icon"
-            disabled={!hasRecording}
-            onClick={onCopy}
-            aria-label="Copy recording JSON"
-            title="Copy recording JSON"
-          >
-            <Copy aria-hidden="true" size={14} />
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            size="icon"
-            disabled={!hasRecording}
-            onClick={onDownload}
-            aria-label="Download recording"
-            title="Download recording"
-          >
-            <Download aria-hidden="true" size={14} />
-          </Button>
           {!isRecording && hasRecording && enableJudge && (
             <Button
               type="button"

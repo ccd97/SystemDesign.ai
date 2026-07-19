@@ -37,7 +37,10 @@ function ScoreBar({ score }: { score: number }) {
         <div
           key={i}
           className={`judge-score-block ${i < score ? "judge-score-block--filled" : ""}`}
-          style={i < score ? { background: scoreColor(score) } : undefined}
+          style={{
+            ...(i < score ? { background: scoreColor(score) } : {}),
+            '--si': i,
+          } as React.CSSProperties}
         />
       ))}
     </div>
@@ -89,8 +92,8 @@ export function JudgeReport({ report, canvasName, durationMs, onClose }: JudgeRe
           <section className="judge-section">
             <h3>Dimensions</h3>
             <div className="judge-dimensions">
-              {report.dimensions.map((dim) => (
-                <div key={dim.name} className="judge-dimension">
+              {report.dimensions.map((dim, index) => (
+                <div key={dim.name} className="judge-dimension" style={{ '--i': index } as React.CSSProperties}>
                   <div className="judge-dimension-header">
                     <span className="judge-dimension-name">{dim.name}</span>
                     <ScoreBar score={dim.score} />
