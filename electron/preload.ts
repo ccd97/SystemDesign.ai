@@ -19,6 +19,19 @@ contextBridge.exposeInMainWorld("recordingAPI", {
     ipcRenderer.invoke("recording:save", canvasId, session),
   delete: (canvasId: string, sessionId: string) =>
     ipcRenderer.invoke("recording:delete", canvasId, sessionId),
+  saveAudio: (canvasId: string, sessionId: string, buffer: ArrayBuffer) =>
+    ipcRenderer.invoke("recording:save-audio", canvasId, sessionId, buffer),
+  loadAudio: (canvasId: string, sessionId: string) =>
+    ipcRenderer.invoke("recording:load-audio", canvasId, sessionId),
+  saveJudge: (canvasId: string, sessionId: string, report: unknown) =>
+    ipcRenderer.invoke("recording:save-judge", canvasId, sessionId, report),
+  loadJudge: (canvasId: string, sessionId: string) =>
+    ipcRenderer.invoke("recording:load-judge", canvasId, sessionId),
+});
+
+contextBridge.exposeInMainWorld("settingsAPI", {
+  load: () => ipcRenderer.invoke("settings:load"),
+  save: (settings: unknown) => ipcRenderer.invoke("settings:save", settings),
 });
 
 contextBridge.exposeInMainWorld("recorderAPI", {

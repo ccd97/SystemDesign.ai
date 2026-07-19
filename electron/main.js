@@ -4,6 +4,7 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { defaultSettings } from "../src/settings/types";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const blankExcalidrawFile = () => ({
     type: "excalidraw",
@@ -16,12 +17,33 @@ const blankExcalidrawFile = () => ({
     },
     files: {},
 });
+const settingsPath = () => path.join(app.getPath("userData"), "settings.json");
+async function readSettings() {
+    await ensureStorage();
+    if (!existsSync(settingsPath())) {
+        return defaultSettings;
+    }
+    try {
+        const raw = await readFile(settingsPath(), "utf8");
+        const parsed = JSON.parse(raw);
+        return { ...defaultSettings, ...parsed };
+    }
+    catch {
+        return defaultSettings;
+    }
+}
+async function writeSettings(settings) {
+    await ensureStorage();
+    await writeFile(settingsPath(), JSON.stringify(settings, null, 2), "utf8");
+}
 const canvasesRoot = () => path.join(app.getPath("userData"), "canvases");
 const indexPath = () => path.join(canvasesRoot(), "index.json");
 const canvasDir = (canvasId) => path.join(canvasesRoot(), canvasId);
 const canvasFile = (canvasId) => path.join(canvasDir(canvasId), "canvas.excalidraw");
 const recordingsDir = (canvasId) => path.join(canvasDir(canvasId), "recordings");
 const recordingFile = (canvasId, sessionId) => path.join(recordingsDir(canvasId), `${sessionId}.json`);
+const audioFile = (canvasId, sessionId) => path.join(recordingsDir(canvasId), `${sessionId}.webm`);
+const judgeFile = (canvasId, sessionId) => path.join(recordingsDir(canvasId), `${sessionId}.judge.json`);
 async function ensureStorage() {
     await mkdir(canvasesRoot(), { recursive: true });
 }
@@ -136,7 +158,7 @@ async function listRecordings(canvasId) {
         const session = JSON.parse(raw);
         return {
             sessionId: session.sessionId,
-            canvasId: session.canvasId,
+            canvasId,
             canvasName: session.canvasName,
             startedAt: session.startedAt,
             endedAt: session.endedAt,
@@ -155,9 +177,38 @@ async function saveRecording(canvasId, session) {
     await writeFile(recordingFile(canvasId, session.sessionId), JSON.stringify(session, null, 2), "utf8");
     return listRecordings(canvasId);
 }
+async function saveJudge(canvasId, sessionId, report) {
+    await mkdir(recordingsDir(canvasId), { recursive: true });
+    await writeFile(judgeFile(canvasId, sessionId), JSON.stringify(report, null, 2), "utf8");
+}
+async function loadJudge(canvasId, sessionId) {
+    const filePath = judgeFile(canvasId, sessionId);
+    if (!existsSync(filePath))
+        return null;
+    try {
+        const raw = await readFile(filePath, "utf8");
+        return JSON.parse(raw);
+    }
+    catch {
+        return null;
+    }
+}
 async function deleteRecording(canvasId, sessionId) {
     await rm(recordingFile(canvasId, sessionId), { force: true });
+    await rm(audioFile(canvasId, sessionId), { force: true });
+    await rm(judgeFile(canvasId, sessionId), { force: true });
     return listRecordings(canvasId);
+}
+async function saveAudio(canvasId, sessionId, buffer) {
+    await mkdir(recordingsDir(canvasId), { recursive: true });
+    await writeFile(audioFile(canvasId, sessionId), Buffer.from(buffer));
+}
+async function loadAudio(canvasId, sessionId) {
+    const filePath = audioFile(canvasId, sessionId);
+    if (!existsSync(filePath))
+        return null;
+    const buf = await readFile(filePath);
+    return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
 }
 async function exportJson(defaultPath, json) {
     const result = await dialog.showSaveDialog({
@@ -192,6 +243,8 @@ function createWindow() {
     }
 }
 app.whenReady().then(() => {
+    ipcMain.handle("settings:load", readSettings);
+    ipcMain.handle("settings:save", (_event, settings) => writeSettings(settings));
     ipcMain.handle("canvas:list", listCanvases);
     ipcMain.handle("canvas:create", (_event, name) => createCanvas(name));
     ipcMain.handle("canvas:load", (_event, canvasId) => loadCanvas(canvasId));
@@ -202,7 +255,11 @@ app.whenReady().then(() => {
     ipcMain.handle("recording:load", (_event, canvasId, sessionId) => loadRecording(canvasId, sessionId));
     ipcMain.handle("recording:save", (_event, canvasId, session) => saveRecording(canvasId, session));
     ipcMain.handle("recording:delete", (_event, canvasId, sessionId) => deleteRecording(canvasId, sessionId));
+    ipcMain.handle("recording:save-audio", (_event, canvasId, sessionId, buffer) => saveAudio(canvasId, sessionId, buffer));
+    ipcMain.handle("recording:load-audio", (_event, canvasId, sessionId) => loadAudio(canvasId, sessionId));
     ipcMain.handle("recorder:export", (_event, defaultPath, json) => exportJson(defaultPath, json));
+    ipcMain.handle("recording:save-judge", (_event, canvasId, sessionId, report) => saveJudge(canvasId, sessionId, report));
+    ipcMain.handle("recording:load-judge", (_event, canvasId, sessionId) => loadJudge(canvasId, sessionId));
     createWindow();
     app.on("activate", () => {
         if (BrowserWindow.getAllWindows().length === 0) {

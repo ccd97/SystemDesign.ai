@@ -1,3 +1,4 @@
+import { AudioRecorder, type AudioChunk } from "./AudioRecorder";
 import {
   coalesceInteractionEvents,
   diffSnapshots,
@@ -5,7 +6,7 @@ import {
   type SceneSnapshot,
 } from "./diff";
 import { saveRecording } from "./RecordingStore";
-import type { InteractionEvent, RecordingSession } from "./types";
+import type { InteractionEvent, RecordingSession, RecordedAction } from "./types";
 
 type SceneInput = {
   elements: readonly unknown[];
@@ -19,6 +20,7 @@ type ActiveSession = {
   startedAt: string;
   startedAtMs: number;
   events: InternalInteractionEvent[];
+  audioFailed?: boolean;
 };
 
 const SNAPSHOT_INTERVAL = 10;
@@ -157,7 +159,7 @@ function compactEvents(events: InternalInteractionEvent[]): InteractionEvent[] {
   return events
     .filter((event) => !OMITTED_EVENT_ACTIONS.has(String(event.action)))
     .map((event, index) => {
-      const { changes: _changes, elapsedMs: _elapsedMs, snapshot, ...recordedEvent } = event;
+      const { changes: _changes, snapshot, ...recordedEvent } = event;
       const seq = index + 1;
       const shouldKeepSnapshot = seq === 1 || seq % SNAPSHOT_INTERVAL === 0;
 
@@ -174,6 +176,7 @@ function compactEvents(events: InternalInteractionEvent[]): InteractionEvent[] {
 export class Recorder {
   private activeSession?: ActiveSession;
   private previousSnapshot?: SceneSnapshot;
+  private audioRecorder = new AudioRecorder();
 
   get isRecording() {
     return Boolean(this.activeSession);
@@ -191,7 +194,7 @@ export class Recorder {
     this.previousSnapshot = snapshot(scene);
   }
 
-  start(canvasId: string, canvasName: string, scene: SceneInput) {
+  async start(canvasId: string, canvasName: string, scene: SceneInput, enableAudio = false) {
     const now = Date.now();
     this.activeSession = {
       sessionId: makeId(),
@@ -202,6 +205,17 @@ export class Recorder {
       events: [],
     };
     this.previousSnapshot = snapshot(scene);
+
+    if (enableAudio) {
+      try {
+        await this.audioRecorder.start();
+      } catch {
+        if (this.activeSession) {
+          this.activeSession.audioFailed = true;
+        }
+      }
+    }
+
     return this.activeSession;
   }
 
@@ -229,6 +243,18 @@ export class Recorder {
     return this.activeSession.events;
   }
 
+  recordCustomEvent(action: RecordedAction, summary: string): void {
+    if (!this.activeSession) return;
+    const now = Date.now();
+    this.activeSession.events.push({
+      seq: this.activeSession.events.length + 1,
+      action,
+      summary,
+      timestamp: new Date(now).toISOString(),
+      elapsedMs: now - this.activeSession.startedAtMs,
+    });
+  }
+
   async stop(scene: SceneInput) {
     if (!this.activeSession) {
       return undefined;
@@ -240,9 +266,17 @@ export class Recorder {
       return undefined;
     }
 
+    let audioBlob: Blob | undefined;
+    let audioChunks: AudioChunk[] | undefined;
+    if (this.audioRecorder.isRecording) {
+      const result = await this.audioRecorder.stop();
+      audioBlob = result.blob;
+      audioChunks = result.chunks;
+    }
+
     const endedAtMs = Date.now();
     const events = compactEvents(this.activeSession.events);
-    const session: RecordingSession = {
+    const session: RecordingSession & { audioBlob?: Blob; audioChunks?: AudioChunk[] } = {
       schemaVersion: "1.3",
       app: "excalidraw-recorder",
       sessionId: this.activeSession.sessionId,
@@ -256,11 +290,22 @@ export class Recorder {
       finalScene: {
         elements: compactSceneElements(scene.elements),
       },
+      hasAudio: Boolean(audioBlob),
+      audioMimeType: audioBlob?.type,
     };
 
     this.activeSession = undefined;
     this.previousSnapshot = snapshot(scene);
-    await saveRecording(session.canvasId, session);
+
+    const { audioBlob: _blob, audioChunks: _chunks, ...sessionForSave } = session;
+    await saveRecording(session.canvasId, sessionForSave);
+
+    if (audioBlob) {
+      session.audioBlob = audioBlob;
+    }
+    if (audioChunks) {
+      session.audioChunks = audioChunks;
+    }
     return session;
   }
 }

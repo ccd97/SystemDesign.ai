@@ -1,3 +1,5 @@
+import type { ChatbotMessage } from "../chatbot/types";
+
 export type RecordedAction =
   | "element_created"
   | "element_deleted"
@@ -7,7 +9,11 @@ export type RecordedAction =
   | "element_restyled"
   | "element_reshaped"
   | "text_edited"
-  | "scene_cleared";
+  | "scene_cleared"
+  | "speech"
+  | "question_generated"
+  | "candidate_question"
+  | "interviewer_response";
 
 export type EventChanges = Record<string, { from: unknown; to: unknown }>;
 
@@ -20,6 +26,12 @@ export type InteractionEvent = {
   elementId?: string;
   elementType?: string;
   snapshot?: Record<string, unknown>;
+};
+
+export type TranscriptionSegment = {
+  startMs: number;
+  endMs: number;
+  text: string;
 };
 
 export type RecordingSession = {
@@ -42,9 +54,16 @@ export type RecordingSession = {
     };
   };
   narrative?: string;
+  hasAudio?: boolean;
+  audioMimeType?: string;
+  transcription?: TranscriptionSegment[];
+  chatHistory?: ChatbotMessage[];
 };
 
 export type RecordingSummary = Pick<
   RecordingSession,
   "sessionId" | "canvasId" | "canvasName" | "startedAt" | "endedAt" | "durationMs" | "eventCount"
->;
+> & {
+  hasAudio?: boolean;
+  hasTranscription?: boolean;
+};

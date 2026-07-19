@@ -1,5 +1,8 @@
 import { Excalidraw } from "@excalidraw/excalidraw";
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, Settings } from "lucide-react";
+import { createTextElement } from "./canvas/addTextElement";
+import { generateQuestion } from "./questions/generateQuestion";
+import type { QuestionGenStatus } from "./questions/types";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   createCanvas,
@@ -14,20 +17,36 @@ import {
   type ExcalidrawFile,
   normalizeCanvasTheme,
 } from "./canvas/CanvasStore";
+import { ChatbotPanel } from "./components/ChatbotPanel";
 import { ConfirmDialog } from "./components/ConfirmDialog";
+import { JudgeReport } from "./components/JudgeReport";
 import { NameDialog } from "./components/NameDialog";
+import { QuestionDialog } from "./components/QuestionDialog";
 import { RecordingDetail } from "./components/RecordingDetail";
+import { SettingsDialog } from "./components/SettingsDialog";
 import { Sidebar } from "./components/Sidebar";
 import { Toolbar } from "./components/Toolbar";
 import { Button } from "./components/ui/button";
+import type { JudgeReport as JudgeReportData } from "./judge/types";
+import { runJudge } from "./judge/runJudge";
+import type { JudgeStatus } from "./judge/runJudge";
 import {
   listRecordings,
   loadRecording,
   recordingFilename,
+  saveAudioBlob,
+  saveRecording,
   sessionToJson,
 } from "./recorder/RecordingStore";
 import { Recorder } from "./recorder/Recorder";
 import type { RecordingSession, RecordingSummary } from "./recorder/types";
+import type { TranscriptionStatus } from "./recorder/TranscriptionJob";
+import { runTranscription } from "./recorder/TranscriptionJob";
+import { persistTranscription } from "./recorder/mergeTranscription";
+import { SettingsProvider, useSettings } from "./settings/SettingsContext";
+import type { ChatbotMessage, ChatbotState } from "./chatbot/types";
+import { askChatbot } from "./chatbot/runChatbot";
+import { VoiceInput } from "./chatbot/VoiceInput";
 
 type SceneState = {
   elements: readonly unknown[];
@@ -35,8 +54,9 @@ type SceneState = {
   files: Record<string, unknown>;
 };
 
-type ExcalidrawThemeApi = {
-  updateScene: (sceneData: { appState?: { theme: CanvasTheme } }) => void;
+type ExcalidrawApi = {
+  updateScene: (sceneData: Record<string, unknown>) => void;
+  getSceneElements: () => readonly unknown[];
 };
 
 type NameDialogState =
@@ -56,11 +76,20 @@ function initialCollapsed() {
 }
 
 export function App() {
+  return (
+    <SettingsProvider>
+      <AppContent />
+    </SettingsProvider>
+  );
+}
+
+function AppContent() {
+  const { settings } = useSettings();
   const recorderRef = useRef(new Recorder());
   const sceneRef = useRef<SceneState>(blankScene);
   const saveTimerRef = useRef<number>();
   const activeCanvasIdRef = useRef<string>();
-  const excalidrawApiRef = useRef<ExcalidrawThemeApi>();
+  const excalidrawApiRef = useRef<ExcalidrawApi>();
 
   const [canvases, setCanvases] = useState<CanvasMeta[]>([]);
   const [activeCanvasId, setActiveCanvasId] = useState<string>();
@@ -76,6 +105,27 @@ export function App() {
   const [eventCount, setEventCount] = useState(0);
   const [durationMs, setDurationMs] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [transcriptionStatus, setTranscriptionStatus] = useState<TranscriptionStatus>({ state: "idle" });
+  const [judgeStatus, setJudgeStatus] = useState<JudgeStatus>({ state: "idle" });
+  const [judgeReport, setJudgeReport] = useState<JudgeReportData>();
+  const [showJudgeReport, setShowJudgeReport] = useState(false);
+  const [questionGenStatus, setQuestionGenStatus] = useState<QuestionGenStatus>({ state: "idle" });
+  const [questionDialogOpen, setQuestionDialogOpen] = useState(false);
+  const [chatbotState, setChatbotState] = useState<ChatbotState>({
+    isOpen: false,
+    interviewQuestion: "",
+    interviewQuestionFull: "",
+    messages: [],
+    isThinking: false,
+    isListening: false,
+    isTranscribing: false,
+  });
+
+  const chatbotStateRef = useRef(chatbotState);
+  chatbotStateRef.current = chatbotState;
+
+  const voiceInputRef = useRef<VoiceInput>();
 
   const activeCanvas = useMemo(
     () => canvases.find((canvas) => canvas.id === activeCanvasId),
@@ -234,11 +284,11 @@ export function App() {
     scheduleSave();
   }
 
-  function handleStartRecording() {
+  async function handleStartRecording() {
     if (!activeCanvas) {
       return;
     }
-    recorderRef.current.start(activeCanvas.id, activeCanvas.name, sceneRef.current);
+    await recorderRef.current.start(activeCanvas.id, activeCanvas.name, sceneRef.current, settings.enableAudioRecording);
     setIsRecording(true);
     setEventCount(0);
     setDurationMs(0);
@@ -251,7 +301,36 @@ export function App() {
     setEventCount(0);
     setDurationMs(0);
     if (session) {
+      if (chatbotState.messages.length > 0) {
+        session.chatHistory = chatbotState.messages;
+        await saveRecording(session.canvasId, session);
+      }
       setLastSession(session);
+      if (session.audioBlob) {
+        await saveAudioBlob(session.canvasId, session.sessionId, session.audioBlob);
+      }
+      if (session.audioBlob && settings.geminiApiKey) {
+        runTranscription(
+          settings.geminiApiKey,
+          settings.audioModel,
+          session.audioBlob,
+          session.sessionId,
+          setTranscriptionStatus,
+          session.audioChunks,
+        ).then(async (segments) => {
+          await persistTranscription(session.canvasId, session.sessionId, segments);
+          await refreshRecordings(session.canvasId);
+          const updated = await loadRecording(session.canvasId, session.sessionId);
+          setLastSession((prev) =>
+            prev?.sessionId === session.sessionId ? updated : prev,
+          );
+          setSelectedRecording((prev) =>
+            prev?.sessionId === session.sessionId ? updated : prev,
+          );
+        }).catch((err) => {
+          console.error("Transcription failed:", err);
+        });
+      }
       await refreshRecordings(session.canvasId);
     }
     return session;
@@ -329,6 +408,8 @@ export function App() {
   async function handleOpenRecording(recording: RecordingSummary) {
     const session = await loadRecording(recording.canvasId, recording.sessionId);
     setSelectedRecording(session);
+    const loadedReport = await window.recordingAPI.loadJudge(recording.canvasId, recording.sessionId);
+    setJudgeReport(loadedReport ?? undefined);
   }
 
   async function copyLastSession() {
@@ -345,33 +426,185 @@ export function App() {
     await window.recorderAPI.export(recordingFilename(lastSession), sessionToJson(lastSession));
   }
 
+  async function handleJudge() {
+    if (!lastSession || !settings.openRouterApiKey) return;
+    try {
+      const report = await runJudge(
+        settings.openRouterApiKey,
+        settings.smartModel,
+        lastSession,
+        setJudgeStatus,
+      );
+      await window.recordingAPI.saveJudge(lastSession.canvasId, lastSession.sessionId, report);
+      setJudgeReport(report);
+      setShowJudgeReport(true);
+    } catch {
+      // error status already set by runJudge
+    }
+  }
+
+  async function handleGenerateQuestion() {
+    setQuestionDialogOpen(true);
+  }
+
+  async function handleConfirmGenerate(domain: string | null, context: string) {
+    if (!settings.openRouterApiKey || !activeCanvasId) return;
+
+    setQuestionGenStatus({ state: "generating" });
+    try {
+      const { title, full } = await generateQuestion(
+        settings.openRouterApiKey,
+        settings.fastModel,
+        { domain, context },
+      );
+
+      const textElement = createTextElement({ text: full, x: 100, y: 60, fontSize: 28, theme: activeTheme });
+      const currentElements = excalidrawApiRef.current?.getSceneElements() ?? [];
+      excalidrawApiRef.current?.updateScene({
+        elements: [...currentElements, textElement],
+      });
+
+      if (recorderRef.current.isRecording) {
+        recorderRef.current.recordCustomEvent(
+          "question_generated",
+          `Interview question: ${title}`,
+        );
+      }
+
+      setQuestionGenStatus({ state: "done", question: title });
+      setChatbotState(prev => ({ ...prev, interviewQuestion: title, interviewQuestionFull: full }));
+      setQuestionDialogOpen(false);
+      setTimeout(() => setQuestionGenStatus({ state: "idle" }), 2000);
+    } catch (e) {
+      setQuestionGenStatus({
+        state: "error",
+        error: e instanceof Error ? e.message : "Failed to generate question",
+      });
+    }
+  }
+
+  async function handleChatbotSend(question: string, source: "text" | "voice") {
+    const userMsg: ChatbotMessage = {
+      role: "user",
+      text: question,
+      timestamp: new Date().toISOString(),
+      elapsedMs: recorderRef.current.startedAtMs
+        ? Date.now() - recorderRef.current.startedAtMs
+        : 0,
+      source,
+    };
+
+    setChatbotState(prev => ({
+      ...prev,
+      messages: [...prev.messages, userMsg],
+      isThinking: true,
+      error: undefined,
+    }));
+
+    if (recorderRef.current.isRecording) {
+      recorderRef.current.recordCustomEvent("candidate_question", `[${source}] ${question}`);
+    }
+
+    try {
+      const response = await askChatbot(
+        settings.openRouterApiKey,
+        settings.fastModel,
+        chatbotStateRef.current.interviewQuestionFull || chatbotStateRef.current.interviewQuestion,
+        [...chatbotStateRef.current.messages, userMsg],
+        question,
+      );
+
+      const assistantMsg: ChatbotMessage = {
+        role: "assistant",
+        text: response,
+        timestamp: new Date().toISOString(),
+        elapsedMs: recorderRef.current.startedAtMs
+          ? Date.now() - recorderRef.current.startedAtMs
+          : 0,
+        source: "text",
+      };
+
+      setChatbotState(prev => ({
+        ...prev,
+        messages: [...prev.messages, assistantMsg],
+        isThinking: false,
+      }));
+
+      if (recorderRef.current.isRecording) {
+        recorderRef.current.recordCustomEvent("interviewer_response", response);
+      }
+    } catch (e) {
+      setChatbotState(prev => ({
+        ...prev,
+        isThinking: false,
+        error: e instanceof Error ? e.message : "Failed to get response",
+      }));
+    }
+  }
+
+  function handleStartListening() {
+    if (!voiceInputRef.current) {
+      voiceInputRef.current = new VoiceInput(settings.geminiApiKey, settings.audioModel);
+    }
+    voiceInputRef.current.startListening();
+    setChatbotState(prev => ({ ...prev, isListening: true }));
+  }
+
+  async function handleStopListening() {
+    if (!voiceInputRef.current) return;
+    setChatbotState(prev => ({ ...prev, isListening: false, isTranscribing: true }));
+    try {
+      const text = await voiceInputRef.current.stopAndTranscribe();
+      if (text.trim()) {
+        await handleChatbotSend(text.trim(), "voice");
+      }
+    } catch (err) {
+      console.error("Voice transcription failed:", err);
+      setChatbotState(prev => ({
+        ...prev,
+        error: err instanceof Error ? err.message : "Voice transcription failed",
+      }));
+    } finally {
+      setChatbotState(prev => ({ ...prev, isTranscribing: false }));
+    }
+  }
+
   const showCanvas = activeCanvasId && initialData;
 
   return (
-    <div className="app-shell">
-      <header className="top-bar">
-        <div className="brand">
-          <Button
-            type="button"
-            className="collapse-button"
-            variant="outline"
-            size="icon"
-            onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
-            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {sidebarCollapsed ? (
-              <PanelLeftOpen aria-hidden="true" size={16} />
-            ) : (
-              <PanelLeftClose aria-hidden="true" size={16} />
-            )}
-          </Button>
-          <div>
-            <div className="title-line">
-              <h1>Cyprien&apos;s Excalidraw</h1>
+      <div className="app-shell">
+        <header className="top-bar">
+          <div className="brand">
+            <Button
+              type="button"
+              className="collapse-button"
+              variant="outline"
+              size="icon"
+              onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
+              aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {sidebarCollapsed ? (
+                <PanelLeftOpen aria-hidden="true" size={16} />
+              ) : (
+                <PanelLeftClose aria-hidden="true" size={16} />
+              )}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Settings"
+            >
+              <Settings aria-hidden="true" size={16} />
+            </Button>
+            <div>
+              <div className="title-line">
+                <h1>Cyprien&apos;s Excalidraw</h1>
+              </div>
+              <p>{activeCanvas?.name ?? "No canvas selected"}</p>
             </div>
-            <p>{activeCanvas?.name ?? "No canvas selected"}</p>
           </div>
-        </div>
         <Toolbar
           isRecording={isRecording}
           eventCount={eventCount}
@@ -383,6 +616,12 @@ export function App() {
           onStop={() => void stopRecording()}
           onCopy={() => void copyLastSession()}
           onDownload={() => void downloadLastSession()}
+          onJudge={() => void handleJudge()}
+          judgeStatus={judgeStatus}
+          enableJudge={settings.enableJudge}
+          onGenerateQuestion={() => void handleGenerateQuestion()}
+          questionGenStatus={questionGenStatus}
+          enableQuestionGen={settings.enableQuestionGen}
         />
       </header>
 
@@ -421,6 +660,16 @@ export function App() {
               }
             />
           ) : null}
+
+          {settings.enableChatbot && (
+            <ChatbotPanel
+              state={chatbotState}
+              onSend={(text) => void handleChatbotSend(text, "text")}
+              onStartListening={handleStartListening}
+              onStopListening={() => void handleStopListening()}
+              onToggle={() => setChatbotState(prev => ({ ...prev, isOpen: !prev.isOpen }))}
+            />
+          )}
         </section>
       </main>
 
@@ -471,8 +720,35 @@ export function App() {
             );
             void refreshRecordings();
           }}
+          onJudge={(session) => {
+            setLastSession(session);
+            void handleJudge();
+          }}
+          onViewReport={() => setShowJudgeReport(true)}
+          judgeReport={judgeReport}
+          judgeStatus={judgeStatus}
+          enableJudge={settings.enableJudge}
+          transcriptionStatus={transcriptionStatus}
         />
       ) : null}
-    </div>
+
+        <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+
+        <QuestionDialog
+          open={questionDialogOpen}
+          onOpenChange={setQuestionDialogOpen}
+          isGenerating={questionGenStatus.state === "generating"}
+          onGenerate={handleConfirmGenerate}
+        />
+
+        {showJudgeReport && judgeReport && selectedRecording && (
+          <JudgeReport
+            report={judgeReport}
+            canvasName={selectedRecording.canvasName}
+            durationMs={selectedRecording.durationMs}
+            onClose={() => setShowJudgeReport(false)}
+          />
+        )}
+      </div>
   );
 }

@@ -28,13 +28,16 @@ type SidebarProps = {
   onOpenRecording: (recording: RecordingSummary) => void;
 };
 
-function formatTime(iso: string) {
+function formatTime(iso: string | undefined) {
+  if (!iso) return "Unknown";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "Unknown";
   return new Intl.DateTimeFormat(undefined, {
     hour: "2-digit",
     minute: "2-digit",
     month: "short",
     day: "numeric",
-  }).format(new Date(iso));
+  }).format(date);
 }
 
 function formatDuration(ms: number) {
@@ -158,7 +161,7 @@ export function Sidebar({
         <CollapsibleContent className="recordings-collapsible-content">
           <div className="sidebar-scroll recordings-scroll">
             <div className="recording-list">
-              {recordings.map((recording) => (
+              {[...new Map(recordings.map((r) => [r.sessionId, r])).values()].map((recording) => (
                 <button
                   type="button"
                   key={recording.sessionId}

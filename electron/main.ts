@@ -4,6 +4,7 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { defaultSettings } from "../src/settings/types";
 
 type CanvasMeta = {
   id: string;
@@ -41,6 +42,39 @@ const blankExcalidrawFile = () => ({
   files: {},
 });
 
+type Settings = {
+  openRouterApiKey: string;
+  geminiApiKey: string;
+  audioModel: string;
+  smartModel: string;
+  fastModel: string;
+  enableAudioRecording: boolean;
+  enableJudge: boolean;
+  enableQuestionGen: boolean;
+  enableChatbot: boolean;
+};
+
+const settingsPath = () => path.join(app.getPath("userData"), "settings.json");
+
+async function readSettings(): Promise<Settings> {
+  await ensureStorage();
+  if (!existsSync(settingsPath())) {
+    return defaultSettings;
+  }
+  try {
+    const raw = await readFile(settingsPath(), "utf8");
+    const parsed = JSON.parse(raw) as Partial<Settings>;
+    return { ...defaultSettings, ...parsed };
+  } catch {
+    return defaultSettings;
+  }
+}
+
+async function writeSettings(settings: Settings): Promise<void> {
+  await ensureStorage();
+  await writeFile(settingsPath(), JSON.stringify(settings, null, 2), "utf8");
+}
+
 const canvasesRoot = () => path.join(app.getPath("userData"), "canvases");
 const indexPath = () => path.join(canvasesRoot(), "index.json");
 const canvasDir = (canvasId: string) => path.join(canvasesRoot(), canvasId);
@@ -48,6 +82,10 @@ const canvasFile = (canvasId: string) => path.join(canvasDir(canvasId), "canvas.
 const recordingsDir = (canvasId: string) => path.join(canvasDir(canvasId), "recordings");
 const recordingFile = (canvasId: string, sessionId: string) =>
   path.join(recordingsDir(canvasId), `${sessionId}.json`);
+const audioFile = (canvasId: string, sessionId: string) =>
+  path.join(recordingsDir(canvasId), `${sessionId}.webm`);
+const judgeFile = (canvasId: string, sessionId: string) =>
+  path.join(recordingsDir(canvasId), `${sessionId}.judge.json`);
 
 async function ensureStorage() {
   await mkdir(canvasesRoot(), { recursive: true });
@@ -177,15 +215,15 @@ async function listRecordings(canvasId: string): Promise<RecordingSummary[]> {
   await mkdir(recordingsDir(canvasId), { recursive: true });
   const { readdir } = await import("node:fs/promises");
   const entries = await readdir(recordingsDir(canvasId), { withFileTypes: true });
-  const summaries = await Promise.all(
+  const results = await Promise.allSettled(
     entries
-      .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".json") && !entry.name.includes(".judge."))
       .map(async (entry) => {
         const raw = await readFile(path.join(recordingsDir(canvasId), entry.name), "utf8");
         const session = JSON.parse(raw) as RecordingSummary;
         return {
           sessionId: session.sessionId,
-          canvasId: session.canvasId,
+          canvasId,
           canvasName: session.canvasName,
           startedAt: session.startedAt,
           endedAt: session.endedAt,
@@ -194,6 +232,9 @@ async function listRecordings(canvasId: string): Promise<RecordingSummary[]> {
         };
       }),
   );
+  const summaries = results
+    .filter((r): r is PromiseFulfilledResult<RecordingSummary> => r.status === "fulfilled")
+    .map((r) => r.value);
   return summaries.sort(
     (left, right) =>
       new Date(right.startedAt).getTime() - new Date(left.startedAt).getTime(),
@@ -215,9 +256,39 @@ async function saveRecording(canvasId: string, session: { sessionId: string }) {
   return listRecordings(canvasId);
 }
 
+async function saveJudge(canvasId: string, sessionId: string, report: unknown): Promise<void> {
+  await mkdir(recordingsDir(canvasId), { recursive: true });
+  await writeFile(judgeFile(canvasId, sessionId), JSON.stringify(report, null, 2), "utf8");
+}
+
+async function loadJudge(canvasId: string, sessionId: string): Promise<unknown | null> {
+  const filePath = judgeFile(canvasId, sessionId);
+  if (!existsSync(filePath)) return null;
+  try {
+    const raw = await readFile(filePath, "utf8");
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
 async function deleteRecording(canvasId: string, sessionId: string) {
   await rm(recordingFile(canvasId, sessionId), { force: true });
+  await rm(audioFile(canvasId, sessionId), { force: true });
+  await rm(judgeFile(canvasId, sessionId), { force: true });
   return listRecordings(canvasId);
+}
+
+async function saveAudio(canvasId: string, sessionId: string, buffer: ArrayBuffer) {
+  await mkdir(recordingsDir(canvasId), { recursive: true });
+  await writeFile(audioFile(canvasId, sessionId), Buffer.from(buffer));
+}
+
+async function loadAudio(canvasId: string, sessionId: string): Promise<ArrayBuffer | null> {
+  const filePath = audioFile(canvasId, sessionId);
+  if (!existsSync(filePath)) return null;
+  const buf = await readFile(filePath);
+  return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
 }
 
 async function exportJson(defaultPath: string, json: string) {
@@ -257,6 +328,9 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  ipcMain.handle("settings:load", readSettings);
+  ipcMain.handle("settings:save", (_event, settings: Settings) => writeSettings(settings));
+
   ipcMain.handle("canvas:list", listCanvases);
   ipcMain.handle("canvas:create", (_event, name: string) => createCanvas(name));
   ipcMain.handle("canvas:load", (_event, canvasId: string) => loadCanvas(canvasId));
@@ -278,8 +352,21 @@ app.whenReady().then(() => {
   ipcMain.handle("recording:delete", (_event, canvasId: string, sessionId: string) =>
     deleteRecording(canvasId, sessionId),
   );
+  ipcMain.handle("recording:save-audio", (_event, canvasId: string, sessionId: string, buffer: ArrayBuffer) =>
+    saveAudio(canvasId, sessionId, buffer),
+  );
+  ipcMain.handle("recording:load-audio", (_event, canvasId: string, sessionId: string) =>
+    loadAudio(canvasId, sessionId),
+  );
   ipcMain.handle("recorder:export", (_event, defaultPath: string, json: string) =>
     exportJson(defaultPath, json),
+  );
+
+  ipcMain.handle("recording:save-judge", (_event, canvasId: string, sessionId: string, report: unknown) =>
+    saveJudge(canvasId, sessionId, report),
+  );
+  ipcMain.handle("recording:load-judge", (_event, canvasId: string, sessionId: string) =>
+    loadJudge(canvasId, sessionId),
   );
 
   createWindow();

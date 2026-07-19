@@ -1,5 +1,7 @@
-import { Activity, Copy, Download, Moon, Radio, Square, Sun, Timer } from "lucide-react";
+import { Activity, Copy, Download, Loader2, Moon, Radio, Scale, Sparkles, Square, Sun, Timer } from "lucide-react";
 import type { CanvasTheme } from "../canvas/CanvasStore";
+import type { JudgeStatus } from "../judge/runJudge";
+import type { QuestionGenStatus } from "../questions/types";
 import { Button } from "./ui/button";
 
 type ToolbarProps = {
@@ -13,6 +15,12 @@ type ToolbarProps = {
   onStop: () => void;
   onCopy: () => void;
   onDownload: () => void;
+  onJudge: () => void;
+  judgeStatus: JudgeStatus;
+  enableJudge: boolean;
+  onGenerateQuestion: () => void;
+  questionGenStatus: QuestionGenStatus;
+  enableQuestionGen: boolean;
 };
 
 function formatDuration(ms: number) {
@@ -35,6 +43,12 @@ export function Toolbar({
   onStop,
   onCopy,
   onDownload,
+  onJudge,
+  judgeStatus,
+  enableJudge,
+  onGenerateQuestion,
+  questionGenStatus,
+  enableQuestionGen,
 }: ToolbarProps) {
   return (
     <div className="toolbar" role="group" aria-label="Canvas controls">
@@ -64,6 +78,25 @@ export function Toolbar({
           <Moon aria-hidden="true" size={13} />
         </Button>
       </div>
+      {enableQuestionGen && !isRecording && (
+        <div className="question-gen-group" role="group" aria-label="Question generation">
+          <Button
+            type="button"
+            variant="secondary"
+            size="icon"
+            disabled={questionGenStatus.state === "generating"}
+            onClick={onGenerateQuestion}
+            aria-label="Generate new question"
+            title="New Question"
+          >
+            {questionGenStatus.state === "generating" ? (
+              <Loader2 aria-hidden="true" size={14} className="judge-button-running" />
+            ) : (
+              <Sparkles aria-hidden="true" size={14} />
+            )}
+          </Button>
+        </div>
+      )}
       <div
         className={`recording-control-strip ${isRecording ? "recording" : ""}`}
         role="group"
@@ -127,6 +160,24 @@ export function Toolbar({
           >
             <Download aria-hidden="true" size={14} />
           </Button>
+          {!isRecording && hasRecording && enableJudge && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="icon"
+              disabled={judgeStatus.state === "running"}
+              onClick={onJudge}
+              className={judgeStatus.state === "running" ? "judge-button-running" : ""}
+              aria-label="Run judge evaluation"
+              title="Judge"
+            >
+              {judgeStatus.state === "running" ? (
+                <Loader2 aria-hidden="true" size={14} />
+              ) : (
+                <Scale aria-hidden="true" size={14} />
+              )}
+            </Button>
+          )}
         </div>
       </div>
     </div>
