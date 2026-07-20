@@ -2,7 +2,13 @@ node_modules/
 dist/
 dist-electron/
 release/
-build/icon.iconset/
+build/
 .DS_Store
 *.log
 *.local
+tsconfig.*.tsbuildinfo
+__pycache__/
+electron/*.js
+electron/*.d.ts
+src/**/*.js
+src/**/*.d.ts

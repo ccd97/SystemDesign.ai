@@ -13,7 +13,7 @@ export type SceneSnapshot = {
   appState: Record<string, unknown>;
 };
 
-export type RecordedInteractionEventDraft = Omit<
+type RecordedInteractionEventDraft = Omit<
   InteractionEvent,
   "seq" | "timestamp"
 > & {

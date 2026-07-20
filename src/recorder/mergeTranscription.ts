@@ -1,7 +1,7 @@
 import type { InteractionEvent, TranscriptionSegment } from "./types";
 import { loadRecording, saveRecording } from "./RecordingStore";
 
-export function mergeTranscriptionIntoEvents(
+function mergeTranscriptionIntoEvents(
   events: InteractionEvent[],
   segments: TranscriptionSegment[],
   sessionStartedAt: string,

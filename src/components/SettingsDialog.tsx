@@ -11,7 +11,7 @@ import {
 } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { useSettings } from "../settings/SettingsContext";
-import type { Settings } from "../settings/types";
+import { validateSettings, type Settings, type SettingsValidationError } from "../settings/types";
 
 type SettingsDialogProps = {
   open: boolean;
@@ -21,20 +21,32 @@ type SettingsDialogProps = {
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const { settings, updateSettings } = useSettings();
   const [form, setForm] = useState<Settings>(settings);
+  const [errors, setErrors] = useState<SettingsValidationError[]>([]);
 
   useEffect(() => {
     if (open) {
       setForm(settings);
+      setErrors([]);
     }
   }, [open, settings]);
 
+  function getFieldError(field: keyof Settings): string | undefined {
+    return errors.find((e) => e.field === field)?.message;
+  }
+
   function handleSave() {
+    const validationErrors = validateSettings(form);
+    if (validationErrors.length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
     updateSettings(form);
     onOpenChange(false);
   }
 
   function patch<K extends keyof Settings>(key: K, value: Settings[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
+    setErrors((prev) => prev.filter((e) => e.field !== key));
   }
 
   return (
@@ -57,7 +69,11 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               placeholder="sk-or-..."
               value={form.openRouterApiKey}
               onChange={(e) => patch("openRouterApiKey", e.target.value)}
+              className={getFieldError("openRouterApiKey") ? "input--error" : ""}
             />
+            {getFieldError("openRouterApiKey") && (
+              <span className="settings-field-error">{getFieldError("openRouterApiKey")}</span>
+            )}
             <span className="settings-field-hint">Used for judge, question gen, and chatbot</span>
           </label>
           <label className="settings-field">
@@ -67,7 +83,11 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               placeholder="AIza..."
               value={form.geminiApiKey}
               onChange={(e) => patch("geminiApiKey", e.target.value)}
+              className={getFieldError("geminiApiKey") ? "input--error" : ""}
             />
+            {getFieldError("geminiApiKey") && (
+              <span className="settings-field-error">{getFieldError("geminiApiKey")}</span>
+            )}
             <span className="settings-field-hint">Used for audio transcription via Google AI</span>
           </label>
         </section>

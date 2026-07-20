@@ -1,7 +1,7 @@
 export type JudgeDimension = {
   name: string;
   score: number;
-  observations: string;
+  observations: string[];
 };
 
 export type JudgeReport = {
@@ -12,5 +12,4 @@ export type JudgeReport = {
   overallScore: number;
   strengths: string[];
   improvements: string[];
-  summary: string;
 };

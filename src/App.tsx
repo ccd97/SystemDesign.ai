@@ -69,7 +69,7 @@ const blankScene: SceneState = {
   files: {},
 };
 
-const storageKey = "excalidraw-recorder.sidebarCollapsed";
+const storageKey = "system-design-ai.sidebarCollapsed";
 
 function initialCollapsed() {
   return localStorage.getItem(storageKey) === "true";
@@ -285,7 +285,7 @@ function AppContent() {
     if (!activeCanvas) {
       return;
     }
-    await recorderRef.current.start(activeCanvas.id, activeCanvas.name, sceneRef.current, settings.enableAudioRecording);
+    await recorderRef.current.start(activeCanvas.id, activeCanvas.name, sceneRef.current, settings.enableAudioRecording, chatbotState.interviewQuestionFull || undefined);
     setIsRecording(true);
     setIsPaused(false);
     setDurationMs(0);
@@ -751,6 +751,7 @@ function AppContent() {
             report={judgeReport}
             canvasName={selectedRecording.canvasName}
             durationMs={selectedRecording.durationMs}
+            question={selectedRecording.question}
             onClose={() => setShowJudgeReport(false)}
           />
         )}

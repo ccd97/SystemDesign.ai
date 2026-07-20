@@ -4,7 +4,7 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { defaultSettings } from "../src/settings/types";
+import { defaultSettings, type Settings } from "../src/settings/types";
 
 type CanvasMeta = {
   id: string;
@@ -33,7 +33,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const blankExcalidrawFile = () => ({
   type: "excalidraw",
   version: 2,
-  source: "excalidraw-recorder",
+  source: "system-design-ai",
   elements: [],
   appState: {
     theme: "dark",
@@ -41,18 +41,6 @@ const blankExcalidrawFile = () => ({
   },
   files: {},
 });
-
-type Settings = {
-  openRouterApiKey: string;
-  geminiApiKey: string;
-  audioModel: string;
-  smartModel: string;
-  fastModel: string;
-  enableAudioRecording: boolean;
-  enableJudge: boolean;
-  enableQuestionGen: boolean;
-  enableChatbot: boolean;
-};
 
 const settingsPath = () => path.join(app.getPath("userData"), "settings.json");
 

@@ -1,5 +1,5 @@
 {
-  "name": "excalidraw-interaction-recorder",
+  "name": "system-design-ai",
   "version": "0.1.0",
   "description": "Desktop app for recording Excalidraw interactions.",
   "private": true,
@@ -8,14 +8,15 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -p tsconfig.json && tsc -p tsconfig.node.json && vite build",
-    "icon": "python3 scripts/create-mac-icon.py",
-    "icon:mac": "npm run icon",
+    "icon": "python3 scripts/create-icon.py",
     "pack:mac": "npm run icon && npm run build && electron-builder --mac --dir",
     "dist:mac": "npm run icon && npm run build && electron-builder --mac",
     "pack:linux": "npm run icon && npm run build && electron-builder --linux --dir",
     "dist:linux": "npm run icon && npm run build && electron-builder --linux AppImage tar.xz",
     "dist:linux:pacman": "npm run icon && npm run build && electron-builder --linux pacman",
-    "install:mac": "npm run pack:mac && rm -rf \"/Applications/Excalidraw Recorder.app\" && cp -R \"release/mac-arm64/Excalidraw Recorder.app\" \"/Applications/\" && rm -rf \"release/mac-arm64\"",
+    "install:mac": "npm run pack:mac && rm -rf \"/Applications/SystemDesign.ai.app\" && cp -R \"release/mac-arm64/SystemDesign.ai.app\" \"/Applications/\" && rm -rf \"release/mac-arm64\"",
+    "pack:win": "npm run icon && npm run build && electron-builder --win --dir",
+    "dist:win": "npm run icon && npm run build && electron-builder --win",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -28,8 +29,7 @@
     "clsx": "^2.1.1",
     "lucide-react": "^1.18.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "tailwind-merge": "^3.6.0"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@types/node": "^20.19.43",
@@ -43,8 +43,8 @@
     "vite-plugin-electron": "^0.28.8"
   },
   "build": {
-    "appId": "com.local.excalidraw-recorder",
-    "productName": "Excalidraw Recorder",
+    "appId": "com.local.system-design-ai",
+    "productName": "SystemDesign.ai",
     "directories": {
       "output": "release"
     },
@@ -70,6 +70,18 @@
         "AppImage",
         "tar.xz"
       ]
+    },
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
     },
     "dmg": {
       "artifactName": "${productName}-${version}-${arch}.${ext}"

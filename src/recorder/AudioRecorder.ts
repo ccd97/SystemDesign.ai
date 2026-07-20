@@ -28,6 +28,24 @@ export class AudioRecorder {
     return this.mediaRecorder?.state === "recording";
   }
 
+  get isPaused(): boolean {
+    return this.mediaRecorder?.state === "paused";
+  }
+
+  pause(): void {
+    if (this.mediaRecorder?.state === "recording") {
+      this.mediaRecorder.pause();
+      if (this.checkTimer) clearInterval(this.checkTimer);
+    }
+  }
+
+  resume(): void {
+    if (this.mediaRecorder?.state === "paused") {
+      this.mediaRecorder.resume();
+      this.checkTimer = setInterval(() => this.checkSilence(), CHECK_INTERVAL_MS);
+    }
+  }
+
   async start(): Promise<void> {
     this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
@@ -144,24 +162,6 @@ export class AudioRecorder {
       return [{ blob: fullBlob, startMs: 0, endMs: elapsed }];
     }
     return this.chunksMeta;
-  }
-
-  discard(): void {
-    if (this.checkTimer) clearInterval(this.checkTimer);
-    if (this.mediaRecorder?.state === "recording") {
-      this.mediaRecorder.stop();
-    }
-
-    this.stream?.getTracks().forEach((track) => track.stop());
-    this.audioContext?.close();
-    this.chunks = [];
-    this.currentChunkBlobs = [];
-    this.chunksMeta = [];
-    this.recordingStartMs = 0;
-    this.silenceStartMs = 0;
-    this.inSilence = false;
-    this.audioContext = undefined;
-    this.stream = undefined;
   }
 }
 

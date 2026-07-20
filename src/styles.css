@@ -1623,6 +1623,16 @@ button {
   }
 }
 
+.judge-report-overlay.ui-dialog-overlay {
+  z-index: 60;
+  background: hsl(var(--background) / 0.88);
+  backdrop-filter: blur(16px);
+}
+
+.judge-report.ui-dialog-content {
+  z-index: 61;
+}
+
 .judge-report {
   grid-template-rows: auto minmax(0, 1fr) auto;
   width: min(760px, calc(100vw - 40px));
@@ -1652,6 +1662,17 @@ button {
 
 .judge-report-header-text {
   min-width: 0;
+}
+
+.judge-model-name {
+  font-size: 11px;
+  color: hsl(var(--muted-foreground) / 0.6);
+}
+
+.judge-question {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
 }
 
 .judge-report-header-right {
@@ -1705,18 +1726,6 @@ button {
   color: hsl(var(--foreground));
   font-size: 13px;
   font-weight: 650;
-}
-
-.judge-summary {
-  margin: 0;
-  color: hsl(var(--muted-foreground));
-  font-size: 13px;
-  line-height: 1.55;
-  padding: 12px 14px;
-  border-left: 3px solid hsl(var(--ring) / 0.5);
-  border-radius: 0 calc(var(--radius) - 4px) calc(var(--radius) - 4px) 0;
-  background: hsl(var(--card) / 0.5);
-  font-style: italic;
 }
 
 .judge-dimensions {
@@ -1779,9 +1788,11 @@ button {
 
 .judge-dimension-observations {
   margin: 8px 0 0;
+  padding-left: 16px;
   color: hsl(var(--muted-foreground));
   font-size: 12px;
   line-height: 1.45;
+  list-style: disc;
 }
 
 .judge-columns {
@@ -1971,6 +1982,16 @@ button {
   font-size: 11px;
   color: hsl(var(--muted-foreground) / 0.7);
   margin-top: 2px;
+}
+
+.settings-field-error {
+  font-size: 11px;
+  color: hsl(var(--destructive));
+  margin-top: 2px;
+}
+
+.input--error {
+  border-color: hsl(var(--destructive)) !important;
 }
 
 .settings-field .ui-input {

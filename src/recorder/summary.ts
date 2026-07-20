@@ -1,9 +1,7 @@
+import { rounded } from "../lib/utils";
 import type { EventChanges, InteractionEvent } from "./types";
 
 type ElementLike = Record<string, unknown>;
-
-const rounded = (value: unknown) =>
-  typeof value === "number" ? Math.round(value * 10) / 10 : value;
 
 const point = (element: ElementLike) => `(${rounded(element.x)}, ${rounded(element.y)})`;
 

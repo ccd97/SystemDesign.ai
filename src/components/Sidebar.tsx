@@ -1,3 +1,4 @@
+import { formatDuration } from "../lib/utils";
 import { useState } from "react";
 import {
   ChevronDown,
@@ -38,16 +39,6 @@ function formatTime(iso: string | undefined) {
     month: "short",
     day: "numeric",
   }).format(date);
-}
-
-function formatDuration(ms: number) {
-  if (ms < 1000) {
-    return `${ms}ms`;
-  }
-  const seconds = Math.round(ms / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const remainder = seconds % 60;
-  return minutes > 0 ? `${minutes}m ${remainder}s` : `${seconds}s`;
 }
 
 export function Sidebar({

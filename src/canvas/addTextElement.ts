@@ -1,6 +1,6 @@
 import { convertToExcalidrawElements } from "@excalidraw/excalidraw";
 
-export type AddTextOptions = {
+type AddTextOptions = {
   text: string;
   x?: number;
   y?: number;
@@ -33,7 +33,6 @@ export function createTextElement(options: AddTextOptions): Record<string, unkno
   const fontSize = options.fontSize ?? 28;
   const charsPerLine = Math.floor((options.width ?? 800) / (fontSize * 0.55));
   const wrapped = wrapText(options.text, charsPerLine);
-  const strokeColor = options.theme === "light" ? "#1e1e1e" : "#ffffff";
 
   const elements = convertToExcalidrawElements(
     [
@@ -46,7 +45,7 @@ export function createTextElement(options: AddTextOptions): Record<string, unkno
         fontFamily: (options.fontFamily ?? 1) as 1 | 2 | 3 | 4,
         textAlign: "left",
         verticalAlign: "top",
-        strokeColor,
+        strokeColor: "hsl(0, 0%, 0%)",
         backgroundColor: "transparent",
         fillStyle: "solid",
         strokeWidth: 2,

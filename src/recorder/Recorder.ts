@@ -1,3 +1,4 @@
+import { rounded } from "../lib/utils";
 import { AudioRecorder, type AudioChunk } from "./AudioRecorder";
 import {
   coalesceInteractionEvents,
@@ -17,6 +18,7 @@ type ActiveSession = {
   sessionId: string;
   canvasId: string;
   canvasName: string;
+  question?: string;
   startedAt: string;
   startedAtMs: number;
   events: InternalInteractionEvent[];
@@ -26,8 +28,7 @@ type ActiveSession = {
 };
 
 const SNAPSHOT_INTERVAL = 10;
-const OMITTED_RECORDING_KEYS = new Set(["tool_selected"]);
-const OMITTED_EVENT_ACTIONS = new Set(["tool_selected"]);
+
 
 const makeId = () =>
   globalThis.crypto?.randomUUID?.() ?? `session-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -39,8 +40,7 @@ function snapshot(scene: SceneInput): SceneSnapshot {
   };
 }
 
-const rounded = (value: unknown) =>
-  typeof value === "number" ? Math.round(value * 10) / 10 : value;
+
 
 function sanitizeRecordingValue(value: unknown): unknown {
   if (Array.isArray(value)) {
@@ -52,9 +52,10 @@ function sanitizeRecordingValue(value: unknown): unknown {
   }
 
   return Object.fromEntries(
-    Object.entries(value as Record<string, unknown>)
-      .filter(([key]) => !OMITTED_RECORDING_KEYS.has(key))
-      .map(([key, nestedValue]) => [key, sanitizeRecordingValue(nestedValue)]),
+    Object.entries(value as Record<string, unknown>).map(([key, nestedValue]) => [
+      key,
+      sanitizeRecordingValue(nestedValue),
+    ]),
   );
 }
 
@@ -158,9 +159,7 @@ function compactSceneElements(elements: readonly unknown[]) {
 }
 
 function compactEvents(events: InternalInteractionEvent[]): InteractionEvent[] {
-  return events
-    .filter((event) => !OMITTED_EVENT_ACTIONS.has(String(event.action)))
-    .map((event, index) => {
+  return events.map((event, index) => {
       const { changes: _changes, snapshot, ...recordedEvent } = event;
       const seq = index + 1;
       const shouldKeepSnapshot = seq === 1 || seq % SNAPSHOT_INTERVAL === 0;
@@ -206,12 +205,13 @@ export class Recorder {
     this.previousSnapshot = snapshot(scene);
   }
 
-  async start(canvasId: string, canvasName: string, scene: SceneInput, enableAudio = false) {
+  async start(canvasId: string, canvasName: string, scene: SceneInput, enableAudio = false, question?: string) {
     const now = Date.now();
     this.activeSession = {
       sessionId: makeId(),
       canvasId,
       canvasName,
+      question,
       startedAt: new Date(now).toISOString(),
       startedAtMs: now,
       events: [],
@@ -259,12 +259,14 @@ export class Recorder {
   pause(): void {
     if (!this.activeSession || this.activeSession.pausedAtMs) return;
     this.activeSession.pausedAtMs = Date.now();
+    this.audioRecorder.pause();
   }
 
   resume(): void {
     if (!this.activeSession || !this.activeSession.pausedAtMs) return;
     this.activeSession.totalPausedMs += Date.now() - this.activeSession.pausedAtMs;
     this.activeSession.pausedAtMs = undefined;
+    this.audioRecorder.resume();
   }
 
   recordCustomEvent(action: RecordedAction, summary: string): void {
@@ -292,7 +294,7 @@ export class Recorder {
 
     let audioBlob: Blob | undefined;
     let audioChunks: AudioChunk[] | undefined;
-    if (this.audioRecorder.isRecording) {
+    if (this.audioRecorder.isRecording || this.audioRecorder.isPaused) {
       const result = await this.audioRecorder.stop();
       audioBlob = result.blob;
       audioChunks = result.chunks;
@@ -306,10 +308,11 @@ export class Recorder {
     const events = compactEvents(this.activeSession.events);
     const session: RecordingSession & { audioBlob?: Blob; audioChunks?: AudioChunk[] } = {
       schemaVersion: "1.3",
-      app: "excalidraw-recorder",
+      app: "system-design-ai",
       sessionId: this.activeSession.sessionId,
       canvasId: this.activeSession.canvasId,
       canvasName: this.activeSession.canvasName,
+      question: this.activeSession.question,
       startedAt: this.activeSession.startedAt,
       endedAt: new Date(endedAtMs).toISOString(),
       durationMs: endedAtMs - this.activeSession.startedAtMs - totalPausedMs,

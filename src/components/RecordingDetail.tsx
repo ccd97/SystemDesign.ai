@@ -1,3 +1,4 @@
+import { formatDuration } from "../lib/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Activity, AlertCircle, CheckCircle2, Copy, Download, Loader2, Maximize2, Pause, Play, Scale, Trash2, X } from "lucide-react";
 import { exportToCanvas } from "@excalidraw/excalidraw";
@@ -29,13 +30,6 @@ type RecordingDetailProps = {
   enableJudge?: boolean;
   transcriptionStatus?: TranscriptionStatus;
 };
-
-function formatDuration(ms: number) {
-  const totalSeconds = Math.max(0, Math.round(ms / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
-}
 
 function formatTime(seconds: number) {
   if (!Number.isFinite(seconds) || seconds < 0) seconds = 0;

@@ -1,3 +1,4 @@
+import { formatDuration } from "../lib/utils";
 import { CheckCircle2, TrendingUp, X } from "lucide-react";
 import type { JudgeReport as JudgeReportType } from "../judge/types";
 import { Button } from "./ui/button";
@@ -14,15 +15,9 @@ type JudgeReportProps = {
   report: JudgeReportType;
   canvasName: string;
   durationMs: number;
+  question?: string;
   onClose: () => void;
 };
-
-function formatDuration(ms: number) {
-  const totalSeconds = Math.max(0, Math.round(ms / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
-}
 
 function scoreColor(score: number) {
   if (score <= 2) return "#ff6b6b";
@@ -47,10 +42,10 @@ function ScoreBar({ score }: { score: number }) {
   );
 }
 
-export function JudgeReport({ report, canvasName, durationMs, onClose }: JudgeReportProps) {
+export function JudgeReport({ report, canvasName, durationMs, question, onClose }: JudgeReportProps) {
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <DialogContent className="judge-report" showClose={false}>
+      <DialogContent className="judge-report" overlayClassName="judge-report-overlay" showClose={false}>
         <DialogHeader className="judge-report-header">
           <div className="judge-report-header-text">
             <p className="eyebrow">Judge Report</p>
@@ -60,7 +55,7 @@ export function JudgeReport({ report, canvasName, durationMs, onClose }: JudgeRe
             </DialogDescription>
             <div className="detail-meta">
               <span>{formatDuration(durationMs)}</span>
-              <span>{report.model}</span>
+              <span className="judge-model-name">{report.model}</span>
             </div>
           </div>
           <div className="judge-report-header-right">
@@ -84,10 +79,12 @@ export function JudgeReport({ report, canvasName, durationMs, onClose }: JudgeRe
         </DialogHeader>
 
         <div className="judge-report-body">
-          <section className="judge-section">
-            <h3>Summary</h3>
-            <p className="judge-summary">{report.summary}</p>
-          </section>
+          {question && (
+            <section className="judge-section">
+              <h3>Question</h3>
+              <p className="judge-question">{question}</p>
+            </section>
+          )}
 
           <section className="judge-section">
             <h3>Dimensions</h3>
@@ -98,7 +95,11 @@ export function JudgeReport({ report, canvasName, durationMs, onClose }: JudgeRe
                     <span className="judge-dimension-name">{dim.name}</span>
                     <ScoreBar score={dim.score} />
                   </div>
-                  <p className="judge-dimension-observations">{dim.observations}</p>
+                  <ul className="judge-dimension-observations">
+                    {dim.observations.map((obs, j) => (
+                      <li key={j}>{obs}</li>
+                    ))}
+                  </ul>
                 </div>
               ))}
             </div>

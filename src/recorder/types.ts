@@ -36,7 +36,7 @@ export type TranscriptionSegment = {
 
 export type RecordingSession = {
   schemaVersion: string;
-  app: "excalidraw-recorder";
+  app: "system-design-ai";
   sessionId: string;
   canvasId: string;
   canvasName: string;
@@ -53,6 +53,7 @@ export type RecordingSession = {
       theme?: string;
     };
   };
+  question?: string;
   narrative?: string;
   hasAudio?: boolean;
   audioMimeType?: string;

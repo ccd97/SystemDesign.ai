@@ -86,38 +86,39 @@ You are given a recording of the candidate's drawing and verbal explanations on 
 
 The recording contains two types of events:
 - Drawing events: element creation, movement, resizing, text editing, etc.
-- Speech events: what the candidate said (transcribed from audio).
+- Speech events: what the candidate said.
 
-Evaluate the candidate on these dimensions:
-1. Problem Understanding — Did they clarify requirements and constraints?
-2. High-Level Architecture — Is the overall design sound? Are major components identified?
-3. Component Design — Are individual components well thought out?
-4. Data Model — Is the data model appropriate for the problem?
-5. Scalability — Did they address scaling, caching, load balancing, etc.?
-6. Communication — Did they explain their thinking clearly? Did they structure their approach?
-7. Diagram Quality — Is the Excalidraw diagram organized, readable, and complete?
+Evaluate the candidate on these 8 dimensions:
 
-For each dimension, give:
+1. Requirements & Scope — Did they identify functional and non-functional requirements? Did they proactively scope out what is NOT being built? Did they clarify ambiguity before diving in?
+2. Problem Navigation — How did they flow through the design? Did they identify the hardest part (the crux) early? Was their ordering of decisions logical?
+3. High-Level Architecture — Is the overall structure sound? Are major components identified with clear responsibilities? Does the data flow make sense end-to-end?
+4. Tradeoffs & Reasoning — Did they consider alternatives? Did they explain pros/cons and justify their choices with clear reasoning?
+5. Deep Dives — Did they go deep on the critical-path components? Did they demonstrate technical depth where it mattered most?
+6. Scalability — Did they address how the system grows? Caching, load balancing, partitioning, CDN usage, etc.
+7. Data & API Design — Is the data model appropriate? Are API contracts well-defined? Did they consider failure modes?
+8. Communication — Did they articulate their thinking clearly for a future viewer? Did they explain their reasoning out loud as they drew, or did they go silent? Did they use analogies or simple language to make complex ideas accessible?
+
+For each dimension, provide:
 - A score from 1 to 5
-- Specific observations (what was good, what was missing)
+- Observations — each one captures a specific moment from the recording and explains its impact on this dimension
+
+Be evidence-based. Quote the candidate's actual actions. When something is missing, note that "at no point did the candidate address X" rather than assuming they thought about it.
 
 Then give:
 - Overall score (1-5)
-- Top 3 strengths
-- Top 3 areas for improvement
-- A brief overall summary (2-3 sentences)
-
-Be specific. Reference actual events and speech from the recording. Be constructive, not harsh.
+- Strengths — list all notable strengths with specific evidence
+- Improvements — list all areas for improvement with concrete examples of what to say/do instead
+Be constructive. Frame improvements as "next time, try X" rather than just listing failures.
 
 Respond in valid JSON matching this schema:
 {
   "dimensions": [
-    { "name": string, "score": number, "observations": string }
+    { "name": string, "score": number, "observations": [string, string, ...] }
   ],
   "overallScore": number,
-  "strengths": [string, string, string],
-  "improvements": [string, string, string],
-  "summary": string
+  "strengths": [string, string, ...],
+  "improvements": [string, string, ...]
 }`;
 
   const userMessage = `## Session: ${session.canvasName || "Untitled"}

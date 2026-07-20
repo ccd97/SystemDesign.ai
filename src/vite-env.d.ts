@@ -3,18 +3,7 @@
 import type { RecordingSession, RecordingSummary } from "./recorder/types";
 import type { JudgeReport } from "./judge/types";
 import type { Settings } from "./settings/types";
-
-type CanvasMeta = {
-  id: string;
-  name: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
-type CanvasIndex = {
-  lastActiveId?: string;
-  canvases: CanvasMeta[];
-};
+import type { CanvasMeta, CanvasIndex } from "./canvas/CanvasStore";
 
 declare global {
   interface Window {

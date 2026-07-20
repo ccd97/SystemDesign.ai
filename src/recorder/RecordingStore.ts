@@ -18,7 +18,7 @@ export async function deleteRecording(canvasId: string, sessionId: string) {
 
 export function recordingFilename(session: Pick<RecordingSession, "sessionId" | "startedAt">) {
   const date = session.startedAt.replaceAll(":", "-").replaceAll(".", "-");
-  return `excalidraw-recording-${date}-${session.sessionId}.json`;
+  return `system-design-ai-recording-${date}-${session.sessionId}.json`;
 }
 
 export function sessionToJson(session: RecordingSession) {

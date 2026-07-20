@@ -18,8 +18,7 @@ function extractJson(text: string): string {
 function validateReport(raw: Record<string, unknown>): raw is Omit<JudgeReport, "sessionId" | "model" | "judgedAt"> {
   return (
     Array.isArray(raw.dimensions) &&
-    typeof raw.overallScore === "number" &&
-    typeof raw.summary === "string"
+    typeof raw.overallScore === "number"
   );
 }
 
@@ -40,7 +39,7 @@ export async function runJudge(
     const parsed = JSON.parse(jsonText) as Record<string, unknown>;
 
     if (!validateReport(parsed)) {
-      throw new Error("Invalid judge response: missing required fields (dimensions, overallScore, summary)");
+      throw new Error("Invalid judge response: missing required fields (dimensions, overallScore)");
     }
 
     const report: JudgeReport = {
@@ -51,7 +50,6 @@ export async function runJudge(
       overallScore: parsed.overallScore,
       strengths: parsed.strengths as string[],
       improvements: parsed.improvements as string[],
-      summary: parsed.summary,
     };
 
     onStatusChange({ state: "done", sessionId, report });
