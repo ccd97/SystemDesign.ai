@@ -1,6 +1,6 @@
-import { chatCompletion } from "../openrouter/chatCompletion";
+import { chatCompletion } from "../../ai/chatCompletion";
 import type { RecordingSession } from "../recorder/types";
-import { buildJudgePrompt } from "./buildJudgePrompt";
+import { buildJudgePrompt } from "../../ai/prompts/buildJudgePrompt";
 import type { JudgeReport } from "./types";
 
 export type JudgeStatus =

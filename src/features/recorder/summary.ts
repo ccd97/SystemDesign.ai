@@ -1,4 +1,4 @@
-import { rounded } from "../lib/utils";
+import { rounded } from "../../utils/utils";
 import type { EventChanges, InteractionEvent } from "./types";
 
 type ElementLike = Record<string, unknown>;

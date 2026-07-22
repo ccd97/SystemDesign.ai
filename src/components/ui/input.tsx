@@ -1,9 +1,9 @@
 import { forwardRef, type InputHTMLAttributes } from "react";
-import { cn } from "../../lib/utils";
+import clsx from "clsx";
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
   ({ className, ...props }, ref) => (
-    <input ref={ref} className={cn("ui-input", className)} {...props} />
+    <input ref={ref} className={clsx("ui-input", className)} {...props} />
   ),
 );
 

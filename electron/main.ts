@@ -4,7 +4,7 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { defaultSettings, type Settings } from "../src/settings/types";
+import { defaultSettings, type Settings } from "../src/features/settings/types";
 
 type CanvasMeta = {
   id: string;

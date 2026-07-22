@@ -1,5 +1,5 @@
-import type { ChatMessage } from "../openrouter/chatCompletion";
-import type { ChatbotMessage } from "./types";
+import type { ChatMessage } from "../chatCompletion";
+import type { ChatbotMessage } from "../../features/chatbot/types";
 
 export function buildChatbotSystemPrompt(interviewQuestion: string): string {
   return `You are a system design interviewer conducting a high-level design interview.

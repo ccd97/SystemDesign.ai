@@ -1,7 +1,7 @@
 import { Circle, Loader2, Moon, Pause, Scale, Sparkles, Square, Sun, Timer } from "lucide-react";
-import type { CanvasTheme } from "../canvas/CanvasStore";
-import type { JudgeStatus } from "../judge/runJudge";
-import type { QuestionGenStatus } from "../questions/types";
+import type { CanvasTheme } from "../features/canvas/CanvasStore";
+import type { JudgeStatus } from "../features/judge/runJudge";
+import type { QuestionGenStatus } from "../features/questions/types";
 import { Button } from "./ui/button";
 
 type ToolbarProps = {

@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { domains } from "../questions/generateQuestion";
+import { domains } from "../ai/prompts/generateQuestion";
 import { Button } from "./ui/button";
 import {
   Dialog,

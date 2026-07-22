@@ -1,6 +1,6 @@
 import type { TranscriptionSegment } from "./types";
-import type { AudioChunk } from "./AudioRecorder";
-import { transcribeAudio } from "../gemini/client";
+import type { AudioChunk } from "../../utils/AudioRecorder";
+import { transcribeAudio } from "../../ai/client";
 
 export type TranscriptionStatus =
   | { state: "idle" }

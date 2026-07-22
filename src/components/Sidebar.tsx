@@ -1,4 +1,4 @@
-import { formatDuration } from "../lib/utils";
+import { formatDuration } from "../utils/utils";
 import { useState } from "react";
 import {
   ChevronDown,
@@ -10,8 +10,8 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import type { CanvasMeta } from "../canvas/CanvasStore";
-import type { RecordingSummary } from "../recorder/types";
+import type { CanvasMeta } from "../features/canvas/CanvasStore";
+import type { RecordingSummary } from "../features/recorder/types";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";

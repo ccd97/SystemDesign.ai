@@ -14,5 +14,6 @@ export type ChatbotState = {
   isThinking: boolean;
   isListening: boolean;
   isTranscribing: boolean;
+  voiceTranscript: string;
   error?: string;
 };

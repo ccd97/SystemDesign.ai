@@ -1,5 +1,5 @@
-import { rounded } from "../lib/utils";
-import { AudioRecorder, type AudioChunk } from "./AudioRecorder";
+import { rounded } from "../../utils/utils";
+import { AudioRecorder, type AudioChunk } from "../../utils/AudioRecorder";
 import {
   coalesceInteractionEvents,
   diffSnapshots,

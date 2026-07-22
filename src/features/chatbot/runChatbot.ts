@@ -1,6 +1,6 @@
-import { chatCompletion } from "../openrouter/chatCompletion";
+import { chatCompletion } from "../../ai/chatCompletion";
 import type { ChatbotMessage } from "./types";
-import { buildChatbotMessages, buildChatbotSystemPrompt } from "./buildChatbotPrompt";
+import { buildChatbotMessages, buildChatbotSystemPrompt } from "../../ai/prompts/buildChatbotPrompt";
 
 export async function askChatbot(
   apiKey: string,

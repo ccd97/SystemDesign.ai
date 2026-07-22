@@ -2485,6 +2485,14 @@ button {
   color: hsl(var(--destructive-foreground));
 }
 
+.chatbot-voice-transcript {
+  padding: 8px 16px;
+  font-size: 13px;
+  color: hsl(var(--muted-foreground));
+  font-style: italic;
+  border-top: 1px solid hsl(var(--border));
+}
+
 @keyframes chatbot-slide-up {
   from { transform: translateY(20px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }

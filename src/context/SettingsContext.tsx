@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import type { Settings } from "./types";
-import { defaultSettings } from "./types";
-import { loadSettings, saveSettings } from "./SettingsStore";
+import type { Settings } from "../features/settings/types";
+import { defaultSettings } from "../features/settings/types";
+import { loadSettings, saveSettings } from "../features/settings/SettingsStore";
 
 type SettingsContextValue = {
   settings: Settings;

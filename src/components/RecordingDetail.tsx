@@ -1,12 +1,12 @@
-import { formatDuration } from "../lib/utils";
+import { formatDuration } from "../utils/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Activity, AlertCircle, CheckCircle2, Copy, Download, Loader2, Maximize2, Pause, Play, Scale, Trash2, X } from "lucide-react";
 import { exportToCanvas } from "@excalidraw/excalidraw";
-import { deleteRecording, loadAudioBlob, recordingFilename, sessionToJson } from "../recorder/RecordingStore";
-import type { RecordingSession } from "../recorder/types";
-import type { JudgeReport } from "../judge/types";
-import type { JudgeStatus } from "../judge/runJudge";
-import type { TranscriptionStatus } from "../recorder/TranscriptionJob";
+import { deleteRecording, loadAudioBlob, recordingFilename, sessionToJson } from "../features/recorder/RecordingStore";
+import type { RecordingSession } from "../features/recorder/types";
+import type { JudgeReport } from "../features/judge/types";
+import type { JudgeStatus } from "../features/judge/runJudge";
+import type { TranscriptionStatus } from "../features/recorder/TranscriptionJob";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import {

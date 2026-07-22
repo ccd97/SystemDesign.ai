@@ -1,6 +1,6 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import type { HTMLAttributes } from "react";
-import { cn } from "../../lib/utils";
+import clsx from "clsx";
 
 const badgeVariants = cva("ui-badge", {
   variants: {
@@ -19,5 +19,5 @@ const badgeVariants = cva("ui-badge", {
 type BadgeProps = HTMLAttributes<HTMLDivElement> & VariantProps<typeof badgeVariants>;
 
 export function Badge({ className, variant, ...props }: BadgeProps) {
-  return <div className={cn(badgeVariants({ variant }), className)} {...props} />;
+  return <div className={clsx(badgeVariants({ variant }), className)} {...props} />;
 }

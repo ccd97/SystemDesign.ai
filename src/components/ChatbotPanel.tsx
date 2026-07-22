@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2, MessageCircle, Mic, SendHorizontal, Square, X } from "lucide-react";
-import type { ChatbotMessage, ChatbotState } from "../chatbot/types";
+import type { ChatbotMessage, ChatbotState } from "../features/chatbot/types";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { ScrollArea } from "./ui/scroll-area";
@@ -117,6 +117,10 @@ export function ChatbotPanel({
       </ScrollArea>
 
       {state.error && <div className="chatbot-error">{state.error}</div>}
+
+      {state.isListening && state.voiceTranscript && (
+        <div className="chatbot-voice-transcript">{state.voiceTranscript}</div>
+      )}
 
       <div className="chatbot-input-row">
         <Button

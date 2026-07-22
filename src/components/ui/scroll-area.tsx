@@ -1,13 +1,13 @@
 import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area";
 import type { ComponentPropsWithoutRef, ElementRef } from "react";
 import { forwardRef } from "react";
-import { cn } from "../../lib/utils";
+import clsx from "clsx";
 
 export const ScrollArea = forwardRef<
   ElementRef<typeof ScrollAreaPrimitive.Root>,
   ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root>
 >(({ className, children, ...props }, ref) => (
-  <ScrollAreaPrimitive.Root ref={ref} className={cn("ui-scroll-area", className)} {...props}>
+  <ScrollAreaPrimitive.Root ref={ref} className={clsx("ui-scroll-area", className)} {...props}>
     <ScrollAreaPrimitive.Viewport className="ui-scroll-area-viewport">
       {children}
     </ScrollAreaPrimitive.Viewport>
@@ -25,7 +25,7 @@ const ScrollBar = forwardRef<
   <ScrollAreaPrimitive.ScrollAreaScrollbar
     ref={ref}
     orientation={orientation}
-    className={cn("ui-scroll-bar", `ui-scroll-bar--${orientation}`, className)}
+    className={clsx("ui-scroll-bar", `ui-scroll-bar--${orientation}`, className)}
     {...props}
   >
     <ScrollAreaPrimitive.ScrollAreaThumb className="ui-scroll-thumb" />

@@ -1,6 +1,6 @@
-import { formatDuration } from "../lib/utils";
+import { formatDuration } from "../utils/utils";
 import { CheckCircle2, TrendingUp, X } from "lucide-react";
-import type { JudgeReport as JudgeReportType } from "../judge/types";
+import type { JudgeReport as JudgeReportType } from "../features/judge/types";
 import { Button } from "./ui/button";
 import {
   Dialog,

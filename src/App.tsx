@@ -1,8 +1,8 @@
 import { Excalidraw } from "@excalidraw/excalidraw";
 import { PanelLeftClose, PanelLeftOpen, Settings } from "lucide-react";
-import { createTextElement } from "./canvas/addTextElement";
-import { generateQuestion } from "./questions/generateQuestion";
-import type { QuestionGenStatus } from "./questions/types";
+import { createTextElement } from "./features/canvas/addTextElement";
+import { generateQuestion } from "./ai/prompts/generateQuestion";
+import type { QuestionGenStatus } from "./features/questions/types";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   createCanvas,
@@ -16,7 +16,7 @@ import {
   type CanvasTheme,
   type ExcalidrawFile,
   normalizeCanvasTheme,
-} from "./canvas/CanvasStore";
+} from "./features/canvas/CanvasStore";
 import { ChatbotPanel } from "./components/ChatbotPanel";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { JudgeReport } from "./components/JudgeReport";
@@ -27,9 +27,9 @@ import { SettingsDialog } from "./components/SettingsDialog";
 import { Sidebar } from "./components/Sidebar";
 import { Toolbar } from "./components/Toolbar";
 import { Button } from "./components/ui/button";
-import type { JudgeReport as JudgeReportData } from "./judge/types";
-import { runJudge } from "./judge/runJudge";
-import type { JudgeStatus } from "./judge/runJudge";
+import type { JudgeReport as JudgeReportData } from "./features/judge/types";
+import { runJudge } from "./features/judge/runJudge";
+import type { JudgeStatus } from "./features/judge/runJudge";
 import {
   listRecordings,
   loadRecording,
@@ -37,16 +37,16 @@ import {
   saveAudioBlob,
   saveRecording,
   sessionToJson,
-} from "./recorder/RecordingStore";
-import { Recorder } from "./recorder/Recorder";
-import type { RecordingSession, RecordingSummary } from "./recorder/types";
-import type { TranscriptionStatus } from "./recorder/TranscriptionJob";
-import { runTranscription } from "./recorder/TranscriptionJob";
-import { persistTranscription } from "./recorder/mergeTranscription";
-import { SettingsProvider, useSettings } from "./settings/SettingsContext";
-import type { ChatbotMessage, ChatbotState } from "./chatbot/types";
-import { askChatbot } from "./chatbot/runChatbot";
-import { VoiceInput } from "./chatbot/VoiceInput";
+} from "./features/recorder/RecordingStore";
+import { Recorder } from "./features/recorder/Recorder";
+import type { RecordingSession, RecordingSummary } from "./features/recorder/types";
+import type { TranscriptionStatus } from "./features/recorder/TranscriptionJob";
+import { runTranscription } from "./features/recorder/TranscriptionJob";
+import { persistTranscription } from "./features/recorder/mergeTranscription";
+import { SettingsProvider, useSettings } from "./context/SettingsContext";
+import type { ChatbotMessage, ChatbotState } from "./features/chatbot/types";
+import { askChatbot } from "./features/chatbot/runChatbot";
+import { VoiceInput } from "./features/chatbot/VoiceInput";
 
 type SceneState = {
   elements: readonly unknown[];
@@ -120,6 +120,7 @@ function AppContent() {
     isThinking: false,
     isListening: false,
     isTranscribing: false,
+    voiceTranscript: "",
   });
 
   const chatbotStateRef = useRef(chatbotState);
@@ -193,7 +194,7 @@ function AppContent() {
     async function boot() {
       const index = await refreshCanvases();
       const nextActiveId =
-        index.lastActiveId && index.canvases.some((canvas) => canvas.id === index.lastActiveId)
+        index.lastActiveId && index.canvases.some((canvas: CanvasMeta) => canvas.id === index.lastActiveId)
           ? index.lastActiveId
           : index.canvases[0]?.id;
 
@@ -377,7 +378,7 @@ function AppContent() {
     setSelectedRecording(undefined);
 
     const nextActiveId =
-      index.lastActiveId && index.canvases.some((item) => item.id === index.lastActiveId)
+      index.lastActiveId && index.canvases.some((item: CanvasMeta) => item.id === index.lastActiveId)
         ? index.lastActiveId
         : index.canvases[0]?.id;
     if (nextActiveId) {
@@ -550,14 +551,19 @@ function AppContent() {
   function handleStartListening() {
     if (!voiceInputRef.current) {
       voiceInputRef.current = new VoiceInput(settings.geminiApiKey, settings.audioModel);
+    } else {
+      voiceInputRef.current.updateModel(settings.audioModel);
     }
+    voiceInputRef.current.setOnPartialTranscript((text) => {
+      setChatbotState(prev => ({ ...prev, voiceTranscript: text }));
+    });
     voiceInputRef.current.startListening();
-    setChatbotState(prev => ({ ...prev, isListening: true }));
+    setChatbotState(prev => ({ ...prev, isListening: true, voiceTranscript: "" }));
   }
 
   async function handleStopListening() {
     if (!voiceInputRef.current) return;
-    setChatbotState(prev => ({ ...prev, isListening: false, isTranscribing: true }));
+    setChatbotState(prev => ({ ...prev, isListening: false, isTranscribing: true, voiceTranscript: "" }));
     try {
       const text = await voiceInputRef.current.stopAndTranscribe();
       if (text.trim()) {

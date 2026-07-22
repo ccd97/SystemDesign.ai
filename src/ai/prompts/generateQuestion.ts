@@ -1,4 +1,4 @@
-import { chatCompletion } from "../openrouter/chatCompletion";
+import { chatCompletion } from "../chatCompletion";
 
 export const domains = [
   "Messaging & Social",

@@ -1,5 +1,5 @@
-import type { ChatMessage } from "../openrouter/chatCompletion";
-import type { RecordingSession } from "../recorder/types";
+import type { ChatMessage } from "../chatCompletion";
+import type { RecordingSession } from "../../features/recorder/types";
 
 function formatElapsed(ms: number): string {
   const totalSec = Math.floor(ms / 1000);

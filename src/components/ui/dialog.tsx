@@ -2,7 +2,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import type { ComponentPropsWithoutRef, ElementRef } from "react";
 import { forwardRef } from "react";
-import { cn } from "../../lib/utils";
+import clsx from "clsx";
 
 const Dialog = DialogPrimitive.Root;
 const DialogPortal = DialogPrimitive.Portal;
@@ -11,7 +11,7 @@ const DialogOverlay = forwardRef<
   ElementRef<typeof DialogPrimitive.Overlay>,
   ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
 >(({ className, ...props }, ref) => (
-  <DialogPrimitive.Overlay ref={ref} className={cn("ui-dialog-overlay", className)} {...props} />
+  <DialogPrimitive.Overlay ref={ref} className={clsx("ui-dialog-overlay", className)} {...props} />
 ));
 
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
@@ -22,7 +22,7 @@ const DialogContent = forwardRef<
 >(({ className, children, showClose = true, overlayClassName, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay className={overlayClassName} />
-    <DialogPrimitive.Content ref={ref} className={cn("ui-dialog-content", className)} {...props}>
+    <DialogPrimitive.Content ref={ref} className={clsx("ui-dialog-content", className)} {...props}>
       {children}
       {showClose ? (
         <DialogPrimitive.Close className="ui-dialog-close">
@@ -37,18 +37,18 @@ const DialogContent = forwardRef<
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 function DialogHeader({ className, ...props }: ComponentPropsWithoutRef<"div">) {
-  return <div className={cn("ui-dialog-header", className)} {...props} />;
+  return <div className={clsx("ui-dialog-header", className)} {...props} />;
 }
 
 function DialogFooter({ className, ...props }: ComponentPropsWithoutRef<"div">) {
-  return <div className={cn("ui-dialog-footer", className)} {...props} />;
+  return <div className={clsx("ui-dialog-footer", className)} {...props} />;
 }
 
 const DialogTitle = forwardRef<
   ElementRef<typeof DialogPrimitive.Title>,
   ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
 >(({ className, ...props }, ref) => (
-  <DialogPrimitive.Title ref={ref} className={cn("ui-dialog-title", className)} {...props} />
+  <DialogPrimitive.Title ref={ref} className={clsx("ui-dialog-title", className)} {...props} />
 ));
 
 DialogTitle.displayName = DialogPrimitive.Title.displayName;
@@ -59,7 +59,7 @@ const DialogDescription = forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
-    className={cn("ui-dialog-description", className)}
+    className={clsx("ui-dialog-description", className)}
     {...props}
   />
 ));

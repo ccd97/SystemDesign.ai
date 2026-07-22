@@ -10,8 +10,8 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { Input } from "./ui/input";
-import { useSettings } from "../settings/SettingsContext";
-import { validateSettings, type Settings, type SettingsValidationError } from "../settings/types";
+import { useSettings } from "../context/SettingsContext";
+import { validateSettings, type Settings, type SettingsValidationError } from "../features/settings/types";
 
 type SettingsDialogProps = {
   open: boolean;
@@ -97,14 +97,14 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             <Cpu size={14} />
             <span>Models</span>
           </div>
-          <label className="settings-field">
+          <div className="settings-field">
             Audio transcription model
             <Input
               value={form.audioModel}
               onChange={(e) => patch("audioModel", e.target.value)}
             />
             <span className="settings-field-hint">Gemini model for audio → text</span>
-          </label>
+          </div>
           <label className="settings-field">
             Smart model (reasoning)
             <Input

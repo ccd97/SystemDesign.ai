@@ -1,19 +1,64 @@
-import type { TranscriptionSegment } from "../recorder/types";
+import type { TranscriptionSegment } from "../features/recorder/types";
+import { arrayBufferToBase64 } from "../utils/utils";
+import { GeminiLiveClient } from "./GeminiLiveClient";
 
 const BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 
 async function blobToBase64(blob: Blob): Promise<string> {
   const buffer = await blob.arrayBuffer();
-  const bytes = new Uint8Array(buffer);
-  const chunkSize = 32768;
-  let binary = "";
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    const slice = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
-    for (let j = 0; j < slice.length; j++) {
-      binary += String.fromCharCode(slice[j]);
-    }
-  }
-  return btoa(binary);
+  return arrayBufferToBase64(buffer);
+}
+
+async function transcribeViaLive(
+  apiKey: string,
+  model: string,
+  audioBlob: Blob,
+): Promise<TranscriptionSegment[]> {
+  return new Promise<TranscriptionSegment[]>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      client.disconnect();
+      reject(new Error("Live transcription timed out"));
+    }, 120_000);
+
+    const segments: Array<{ startMs: number; endMs: number; text: string }> = [];
+    let lastText = "";
+
+    const client = new GeminiLiveClient(apiKey, model, {
+      onSetupComplete: () => {
+        const reader = audioBlob.stream().getReader();
+        const pump = (): Promise<void> =>
+          reader.read().then(({ done, value }) => {
+            if (done) {
+              setTimeout(() => client.sendTurnComplete(), 100);
+              return Promise.resolve();
+            }
+            const b64 = arrayBufferToBase64(value.buffer);
+            client.sendAudio(b64);
+            return pump();
+          });
+        pump().catch(reject);
+      },
+      onTranscript: (text, _isFinal) => {
+        lastText = text;
+      },
+      onTurnComplete: () => {
+        clearTimeout(timeout);
+        const text = lastText.trim();
+        if (text) {
+          segments.push({ startMs: 0, endMs: 0, text });
+        }
+        client.disconnect();
+        resolve(segments);
+      },
+      onError: (err) => {
+        clearTimeout(timeout);
+        reject(new Error(err));
+      },
+      onClose: () => {},
+    });
+
+    client.connect();
+  });
 }
 
 export async function transcribeAudio(
@@ -21,6 +66,12 @@ export async function transcribeAudio(
   model: string,
   audioBlob: Blob,
 ): Promise<TranscriptionSegment[]> {
+  try {
+    return await transcribeViaLive(apiKey, model, audioBlob);
+  } catch {
+    // Fall back to REST
+  }
+
   const base64 = await blobToBase64(audioBlob);
   const mimeType = audioBlob.type || "audio/webm";
 
