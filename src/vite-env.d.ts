@@ -1,9 +1,9 @@
 /// <reference types="vite/client" />
 
-import type { RecordingSession, RecordingSummary } from "./recorder/types";
-import type { JudgeReport } from "./judge/types";
-import type { Settings } from "./settings/types";
-import type { CanvasMeta, CanvasIndex } from "./canvas/CanvasStore";
+import type { RecordingSession, RecordingSummary } from "./entities/recording";
+import type { JudgeReport } from "./entities/recording";
+import type { Settings } from "./entities/settings/model/types";
+import type { CanvasMeta, CanvasIndex, ExcalidrawFile } from "./entities/canvas";
 
 declare global {
   interface Window {
@@ -11,7 +11,7 @@ declare global {
       list: () => Promise<CanvasIndex>;
       create: (name: string) => Promise<CanvasMeta>;
       load: (canvasId: string) => Promise<unknown>;
-      save: (canvasId: string, data: unknown) => Promise<CanvasMeta | undefined>;
+      save: (canvasId: string, data: ExcalidrawFile) => Promise<CanvasMeta | undefined>;
       rename: (canvasId: string, name: string) => Promise<CanvasMeta | undefined>;
       delete: (canvasId: string) => Promise<CanvasIndex>;
     };

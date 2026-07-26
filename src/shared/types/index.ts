@@ -1,0 +1,60 @@
+export type ChatbotMessage = {
+  role: "user" | "assistant";
+  text: string;
+  timestamp: string;
+  elapsedMs: number;
+  source: "text" | "voice";
+};
+
+export type TranscriptionSegment = {
+  startMs: number;
+  endMs: number;
+  text: string;
+};
+
+export type ExcalidrawElementData = {
+  id: string;
+  type: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  angle: number;
+  strokeColor: string;
+  backgroundColor: string;
+  fillStyle: string;
+  strokeWidth: number;
+  strokeStyle: string;
+  roughness: number;
+  opacity: number;
+  groupIds: readonly string[];
+  frameId: string | null;
+  index?: string;
+  roundness: { type: number } | null;
+  seed?: number;
+  version?: number;
+  versionNonce?: number;
+  isDeleted?: boolean;
+  boundElements?: ReadonlyArray<{ id: string; type: string }> | null;
+  updated?: number;
+  link?: string | null;
+  locked?: boolean;
+  text?: string;
+  fontSize?: number;
+  fontFamily?: number;
+  textAlign?: string;
+  verticalAlign?: string;
+  containerId?: string | null;
+  baseline?: number;
+  autoResize?: boolean;
+  lineHeight?: number;
+  points?: ReadonlyArray<readonly [number, number]>;
+  lastCommittedPoint?: readonly [number, number] | null;
+  startBinding?: { elementId: string; focus: number; gap: number } | null;
+  endBinding?: { elementId: string; focus: number; gap: number } | null;
+  startArrowhead?: string | null;
+  endArrowhead?: string | null;
+  fileId?: string | null;
+  scale?: readonly [number, number];
+  name?: string | null;
+};

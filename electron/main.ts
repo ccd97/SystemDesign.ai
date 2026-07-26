@@ -4,7 +4,8 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { defaultSettings, type Settings } from "../src/features/settings/types";
+import { defaultSettings, type Settings } from "../src/entities/settings/model/types";
+import type { ExcalidrawFile } from "../src/entities/canvas/model/types";
 
 type CanvasMeta = {
   id: string;
@@ -161,7 +162,7 @@ async function loadCanvas(canvasId: string) {
   return JSON.parse(raw);
 }
 
-async function saveCanvas(canvasId: string, data: unknown) {
+async function saveCanvas(canvasId: string, data: ExcalidrawFile) {
   const now = new Date().toISOString();
   await mkdir(recordingsDir(canvasId), { recursive: true });
   await writeFile(canvasFile(canvasId), JSON.stringify(data, null, 2), "utf8");
@@ -298,7 +299,7 @@ function createWindow() {
   const mainWindow = new BrowserWindow({
     width: 1280,
     height: 860,
-    minWidth: 900,
+    minWidth: 1100,
     minHeight: 640,
     backgroundColor: "#111827",
     webPreferences: {
@@ -322,7 +323,7 @@ app.whenReady().then(() => {
   ipcMain.handle("canvas:list", listCanvases);
   ipcMain.handle("canvas:create", (_event, name: string) => createCanvas(name));
   ipcMain.handle("canvas:load", (_event, canvasId: string) => loadCanvas(canvasId));
-  ipcMain.handle("canvas:save", (_event, canvasId: string, data: unknown) =>
+  ipcMain.handle("canvas:save", (_event, canvasId: string, data: ExcalidrawFile) =>
     saveCanvas(canvasId, data),
   );
   ipcMain.handle("canvas:rename", (_event, canvasId: string, name: string) =>

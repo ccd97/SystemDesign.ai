@@ -11,5 +11,5 @@
     "skipLibCheck": true,
     "types": ["node", "electron"]
   },
-  "include": ["vite.config.ts", "electron", "src/settings/types.ts"]
+  "include": ["vite.config.ts", "electron", "src/entities/settings/model/types.ts", "src/entities/canvas/model/types.ts", "src/entities/recording/model/types.ts", "src/shared/types/**/*"]
 }
