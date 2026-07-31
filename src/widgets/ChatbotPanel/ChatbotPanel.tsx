@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Loader2, MessageCircle, Mic, SendHorizontal, Square, X } from "lucide-react";
+import { Loader2, MessageCircle, Mic, SendHorizontal, Square, X, MessageCircleX } from "lucide-react";
 import type { ChatbotMessage, ChatbotState } from "../../entities/chatbot";
 import { Button } from "../../shared/components/ui/button";
 import { Input } from "../../shared/components/ui/input";
@@ -11,6 +11,7 @@ type ChatbotPanelProps = {
   onStartListening: () => void;
   onStopListening: () => void;
   onToggle: () => void;
+  onClear: () => void;
 };
 
 function MessageBubble({ message }: { message: ChatbotMessage }) {
@@ -48,6 +49,7 @@ export function ChatbotPanel({
   onStartListening,
   onStopListening,
   onToggle,
+  onClear,
 }: ChatbotPanelProps) {
   const [input, setInput] = useState("");
   const scrollEndRef = useRef<HTMLDivElement>(null);
@@ -81,13 +83,23 @@ export function ChatbotPanel({
     );
   }
 
-  const hasMessages = state.messages.length > 0 || state.isThinking;
+  const hasMessages = state.messages.length > 0 || state.isThinking || ((state.isListening || state.isTranscribing) && !!state.voiceTranscript);
 
   return (
     <div className="chatbot-panel" role="dialog" aria-label="Interviewer chat">
       <div className="chatbot-header">
         <div className="chatbot-header-title">Interviewer Chat</div>
         <div className="chatbot-header-actions">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="Clear chat"
+            onClick={onClear}
+            disabled={state.messages.length === 0 || state.isThinking}
+          >
+            <MessageCircleX size={15} />
+          </Button>
           <Button type="button" variant="ghost" size="icon" aria-label="Close" onClick={onToggle}>
             <X size={15} />
           </Button>
@@ -112,15 +124,24 @@ export function ChatbotPanel({
         {state.messages.map((msg, i) => (
           <MessageBubble key={`${msg.timestamp}-${i}`} message={msg} />
         ))}
+        {(state.isListening || state.isTranscribing) && state.voiceTranscript && (
+          <div className="chatbot-message chatbot-message--user chatbot-message--live">
+            <span className="chatbot-message-label">
+              You
+              {state.isListening && (
+                <span className="chatbot-voice-dots">
+                  <span /><span /><span />
+                </span>
+              )}
+            </span>
+            <span>{state.voiceTranscript}</span>
+          </div>
+        )}
         {state.isThinking && <TypingIndicator />}
         <div ref={scrollEndRef} />
       </ScrollArea>
 
       {state.error && <div className="chatbot-error">{state.error}</div>}
-
-      {state.isListening && state.voiceTranscript && (
-        <div className="chatbot-voice-transcript">{state.voiceTranscript}</div>
-      )}
 
       <div className="chatbot-input-row">
         <Button
@@ -140,6 +161,7 @@ export function ChatbotPanel({
           onKeyDown={handleKeyDown}
           placeholder="Type a question..."
           className="chatbot-text-input"
+          disabled={state.isThinking}
         />
         <Button
           type="button"
@@ -147,7 +169,7 @@ export function ChatbotPanel({
           size="icon"
           className="chatbot-send-button"
           aria-label="Send"
-          disabled={!input.trim()}
+          disabled={!input.trim() || state.isThinking}
           onClick={handleSend}
         >
           <SendHorizontal size={16} />

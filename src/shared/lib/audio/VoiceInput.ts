@@ -11,10 +11,12 @@ export class VoiceInput {
   private liveClient: GeminiLiveClient | null = null;
   private pcmCapture: PcmCapture | null = null;
   private liveTranscript = "";
-  private liveFinalTranscript = "";
   private onPartialTranscript: ((text: string) => void) | null = null;
-  private turnCompleteResolve: (() => void) | null = null;
+  private finishLive: (() => void) | null = null;
+  private liveDebounce: ReturnType<typeof setTimeout> | null = null;
   private activeMode: "rest" | "live" = "rest";
+  private audioBuffer: string[] = [];
+  private static readonly MAX_BUFFER_CHUNKS = 160; // ~5 seconds at 16kHz mono
 
   constructor(apiKey: string, audioModel: string) {
     this.audioRecorder = new AudioRecorder();
@@ -61,34 +63,57 @@ export class VoiceInput {
   private startLive(): Promise<void> {
     return new Promise((resolve, reject) => {
       this.liveTranscript = "";
-      this.liveFinalTranscript = "";
+      this.audioBuffer = [];
+      let settled = false;
+
+      // Start capturing audio immediately — buffer chunks until WebSocket is ready
+      this.pcmCapture = new PcmCapture();
+      this.pcmCapture.start((base64) => {
+        if (this.liveClient) {
+          this.liveClient.sendAudio(base64);
+        } else {
+          if (this.audioBuffer.length < VoiceInput.MAX_BUFFER_CHUNKS) {
+            this.audioBuffer.push(base64);
+          }
+        }
+      }).catch((err) => {
+        if (!settled) {
+          settled = true;
+          reject(err instanceof Error ? err : new Error(String(err)));
+        }
+      });
 
       this.liveClient = new GeminiLiveClient(this.apiKey, this.model, {
         onSetupComplete: () => {
-          this.pcmCapture = new PcmCapture();
-          this.pcmCapture.start((base64) => {
-            this.liveClient?.sendAudio(base64);
-          }).then(() => {
-            resolve();
-          }).catch((err) => {
-            reject(err instanceof Error ? err : new Error(String(err)));
-          });
-        },
-        onTranscript: (_text, isFinal) => {
-          if (isFinal) {
-            this.liveFinalTranscript += _text;
-            this.liveTranscript = "";
-          } else {
-            this.liveTranscript = _text;
+          if (settled) return;
+          // Flush buffered audio chunks
+          for (const chunk of this.audioBuffer) {
+            this.liveClient?.sendAudio(chunk);
           }
-          this.onPartialTranscript?.(this.liveFinalTranscript + this.liveTranscript);
+          this.audioBuffer = [];
+          settled = true;
+          resolve();
+        },
+        onTranscript: (text) => {
+          this.liveTranscript += text;
+          if (this.liveDebounce) {
+            clearTimeout(this.liveDebounce);
+            this.liveDebounce = setTimeout(() => this.finishLive?.(), 1500);
+          }
+          this.onPartialTranscript?.(this.liveTranscript);
         },
         onTurnComplete: () => {
-          this.turnCompleteResolve?.();
-          this.turnCompleteResolve = null;
+          if (!this.liveDebounce) {
+            this.liveDebounce = setTimeout(() => this.finishLive?.(), 1500);
+          }
         },
         onError: (error) => {
-          reject(new Error(error));
+          if (!settled) {
+            settled = true;
+            this.pcmCapture?.stop();
+            this.pcmCapture = null;
+            reject(new Error(error));
+          }
         },
         onClose: () => {
           this.liveClient = null;
@@ -101,19 +126,29 @@ export class VoiceInput {
 
   private stopLive(): Promise<string> {
     return new Promise((resolve) => {
-      this.pcmCapture?.stop();
-      this.pcmCapture = null;
-
-      const waitAndClose = () => {
+      let resolved = false;
+      const finish = () => {
+        if (resolved) return;
+        resolved = true;
+        const transcript = this.liveTranscript.trim();
+        this.finishLive = null;
+        if (this.liveDebounce) {
+          clearTimeout(this.liveDebounce);
+          this.liveDebounce = null;
+        }
+        this.pcmCapture?.stop();
+        this.pcmCapture = null;
         setTimeout(() => {
           this.liveClient?.disconnect();
           this.liveClient = null;
-          resolve((this.liveFinalTranscript + this.liveTranscript).trim());
-        }, 2000);
+        }, 500);
+        resolve(transcript);
       };
 
-      this.turnCompleteResolve = waitAndClose;
+      this.finishLive = finish;
       this.liveClient?.sendTurnComplete();
+
+      setTimeout(finish, 5000);
     });
   }
 }

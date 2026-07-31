@@ -52,6 +52,7 @@ export function useChatbotProcess(options: ChatbotProcessOptions) {
         messages: [...prev.messages, userMsg],
         isThinking: true,
         error: undefined,
+        voiceTranscript: "",
       }));
 
       onRecordCustomEvent?.("candidate_question", `[${source}] ${question}`);
@@ -106,11 +107,16 @@ export function useChatbotProcess(options: ChatbotProcessOptions) {
 
   const handleStopListening = useCallback(async () => {
     if (!voiceInputRef.current) return;
-    updateChatbotState((prev) => ({ ...prev, isListening: false, isTranscribing: true, voiceTranscript: "" }));
+    updateChatbotState((prev) => ({ ...prev, isListening: false, isTranscribing: true }));
     try {
       const text = await voiceInputRef.current.stopAndTranscribe();
       if (text.trim()) {
-        await handleSend(text.trim(), "voice");
+        const { isThinking } = chatbotStateRef.current;
+        if (!isThinking) {
+          await handleSend(text.trim(), "voice");
+        } else {
+          updateChatbotState((prev) => ({ ...prev, voiceTranscript: "", error: "Still processing previous message" }));
+        }
       }
     } catch (err) {
       updateChatbotState((prev) => ({
@@ -119,9 +125,13 @@ export function useChatbotProcess(options: ChatbotProcessOptions) {
         error: err instanceof Error ? err.message : "Voice transcription failed",
       }));
     } finally {
-      updateChatbotState((prev) => ({ ...prev, isTranscribing: false }));
+      updateChatbotState((prev) => ({ ...prev, isTranscribing: false, voiceTranscript: "" }));
     }
   }, [handleSend, updateChatbotState]);
+
+  const clearMessages = useCallback(() => {
+    updateChatbotState((prev) => ({ ...prev, messages: [], error: undefined }));
+  }, [updateChatbotState]);
 
   const toggleOpen = useCallback(() => {
     updateChatbotState((prev) => ({ ...prev, isOpen: !prev.isOpen }));
@@ -138,5 +148,6 @@ export function useChatbotProcess(options: ChatbotProcessOptions) {
     handleStopListening,
     toggleOpen,
     setQuestion,
+    clearMessages,
   };
 }

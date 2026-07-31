@@ -1,14 +1,26 @@
+# Dependencies
 node_modules/
+
+# Build output
 dist/
 dist-electron/
 release/
 build/
+
+# TypeScript compiled output
+*.d.ts
+!src/vite-env.d.ts
+*.js
+*.tsbuildinfo
+
+# OS
 .DS_Store
+
+# Logs
 *.log
+
+# Environment
 *.local
-tsconfig.*.tsbuildinfo
+
+# Python
 __pycache__/
-electron/*.js
-electron/*.d.ts
-src/**/*.js
-src/**/*.d.ts

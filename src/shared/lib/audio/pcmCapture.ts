@@ -15,6 +15,20 @@ class PcmProcessor extends AudioWorkletProcessor {
 registerProcessor("pcm-processor", PcmProcessor);
 `;
 
+let sharedCtx: AudioContext | null = null;
+let sharedWorkletReady: Promise<void> | null = null;
+
+export function ensureSharedCtx(): Promise<AudioContext> {
+  if (sharedCtx) return Promise.resolve(sharedCtx);
+  sharedCtx = new AudioContext({ sampleRate: TARGET_SAMPLE_RATE });
+  const blob = new Blob([WORKLET_CODE], { type: "application/javascript" });
+  const url = URL.createObjectURL(blob);
+  sharedWorkletReady = sharedCtx.audioWorklet.addModule(url).then(() => {
+    URL.revokeObjectURL(url);
+  });
+  return sharedWorkletReady.then(() => sharedCtx!);
+}
+
 export class PcmCapture {
   private audioContext: AudioContext | null = null;
   private stream: MediaStream | null = null;
@@ -24,11 +38,7 @@ export class PcmCapture {
 
   async start(onChunk: (base64: string) => void): Promise<void> {
     this.onChunk = onChunk;
-    this.audioContext = new AudioContext({ sampleRate: TARGET_SAMPLE_RATE });
-    const blob = new Blob([WORKLET_CODE], { type: "application/javascript" });
-    const url = URL.createObjectURL(blob);
-    await this.audioContext.audioWorklet.addModule(url);
-    URL.revokeObjectURL(url);
+    this.audioContext = await ensureSharedCtx();
     this.stream = await navigator.mediaDevices.getUserMedia({
       audio: {
         sampleRate: TARGET_SAMPLE_RATE,
@@ -40,8 +50,9 @@ export class PcmCapture {
     this.source = this.audioContext.createMediaStreamSource(this.stream);
     this.workletNode = new AudioWorkletNode(this.audioContext, "pcm-processor");
     this.workletNode.port.onmessage = (event) => {
+      if (!this.audioContext) return;
       const channelData = event.data.audio as Float32Array;
-      const resampled = this.resample(channelData, this.audioContext!.sampleRate, TARGET_SAMPLE_RATE);
+      const resampled = this.resample(channelData, this.audioContext.sampleRate, TARGET_SAMPLE_RATE);
       const pcm16 = floatTo16BitPCM(resampled);
       const base64 = arrayBufferToBase64(pcm16.buffer as ArrayBuffer);
       this.onChunk?.(base64);
@@ -53,12 +64,11 @@ export class PcmCapture {
     this.workletNode?.disconnect();
     this.source?.disconnect();
     this.stream?.getTracks().forEach((t) => t.stop());
-    void this.audioContext?.close();
-    this.audioContext = null;
-    this.stream = null;
-    this.source = null;
     this.workletNode = null;
+    this.source = null;
+    this.stream = null;
     this.onChunk = null;
+    this.audioContext = null;
   }
 
   private resample(

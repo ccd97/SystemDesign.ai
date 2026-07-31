@@ -236,7 +236,7 @@ export function EditorPage() {
             </Button>
             <div>
               <div className="title-line">
-                <h1>Cyprien&apos;s Excalidraw</h1>
+                <h1>SystemDesign.ai</h1>
               </div>
               <p>{canvas.activeCanvas?.name ?? "No canvas selected"}</p>
             </div>
@@ -308,6 +308,7 @@ export function EditorPage() {
               onStartListening={chatbot.handleStartListening}
               onStopListening={() => void chatbot.handleStopListening()}
               onToggle={chatbot.toggleOpen}
+              onClear={chatbot.clearMessages}
             />
           )}
         </section>

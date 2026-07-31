@@ -2492,12 +2492,37 @@ button {
   color: hsl(var(--destructive-foreground));
 }
 
-.chatbot-voice-transcript {
-  padding: 8px 16px;
-  font-size: 13px;
-  color: hsl(var(--muted-foreground));
-  font-style: italic;
-  border-top: 1px solid hsl(var(--border));
+.chatbot-message--live {
+  opacity: 0.85;
+}
+
+.chatbot-voice-dots {
+  display: inline-flex;
+  gap: 2px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.chatbot-voice-dots span {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.5;
+  animation: chatbot-voice-bounce 1.2s ease-in-out infinite;
+}
+
+.chatbot-voice-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.chatbot-voice-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes chatbot-voice-bounce {
+  0%, 60%, 100% { opacity: 0.2; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-2px); }
 }
 
 @keyframes chatbot-slide-up {

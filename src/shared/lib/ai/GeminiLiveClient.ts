@@ -125,7 +125,7 @@ export class GeminiLiveClient {
       this.events.onTranscript(inputTranscription.text, inputTranscription.finished ?? false);
     }
 
-    if (serverContent.turnComplete) {
+    if (serverContent.turnComplete || serverContent.waitingForInput) {
       this.events.onTurnComplete();
     }
   }
