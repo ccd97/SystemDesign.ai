@@ -9,10 +9,11 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/TypeScript-5.9-blue?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/github/v/release/ccd97/SystemDesign.ai?style=flat-square" alt="Latest Release" />
+  <img alt="GitHub package.json dev/peer/optional dependency version" src="https://img.shields.io/github/package-json/dependency-version/ccd97/SystemDesign.ai/dev/typescript">
+  <img alt="GitHub Downloads (all assets, all releases)" src="https://img.shields.io/github/downloads/ccd97/SystemDesign.ai/total">
   <img src="https://img.shields.io/github/stars/ccd97/SystemDesign.ai?style=flat-square" alt="Stars" />
-  <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="License" />
+  <img src="https://img.shields.io/github/license/ccd97/SystemDesign.ai?style=flat-square" alt="License" />
 </p>
 
 ---
