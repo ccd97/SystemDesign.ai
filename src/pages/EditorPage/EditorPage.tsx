@@ -17,8 +17,6 @@ import { Button } from "../../shared/components/ui/button";
 import {
   listRecordings,
   loadRecording,
-  recordingFilename,
-  sessionToJson,
 } from "../../features/recorder";
 import type { RecordingSession, RecordingSummary } from "../../features/recorder";
 import { useSettings } from "../../app/providers/SettingsProvider";
@@ -205,6 +203,20 @@ export function EditorPage() {
     }
   }
 
+  const handleExcalidrawApi = useCallback((api: ExcalidrawApi) => {
+    excalidrawApiRef.current = api;
+  }, []);
+
+  const handleExcalidrawChange = useCallback(
+    (elements: unknown, appState: unknown, files: unknown) =>
+      handleSceneChange(
+        elements as readonly ExcalidrawElementData[],
+        appState as Record<string, unknown>,
+        files as Record<string, unknown>,
+      ),
+    [handleSceneChange],
+  );
+
   const showCanvas = canvas.activeCanvasId && canvas.initialData;
 
   return (
@@ -259,7 +271,10 @@ export function EditorPage() {
           onJudge={() => void handleJudge()}
           judgeStatus={recording.judgeStatus}
           enableJudge={settings.enableJudge}
-          onGenerateQuestion={() => setQuestionDialogOpen(true)}
+          onGenerateQuestion={() => {
+            setQuestionGenStatus({ state: "idle" });
+            setQuestionDialogOpen(true);
+          }}
           questionGenStatus={questionGenStatus}
           enableQuestionGen={settings.enableQuestionGen}
         />
@@ -288,16 +303,8 @@ export function EditorPage() {
               key={canvas.activeCanvasId}
               initialData={canvas.initialData as never}
               theme={canvas.activeTheme}
-              excalidrawAPI={(api) => {
-                excalidrawApiRef.current = api;
-              }}
-              onChange={(elements, appState, files) =>
-                handleSceneChange(
-                  elements as readonly ExcalidrawElementData[],
-                  appState as unknown as Record<string, unknown>,
-                  files as Record<string, unknown>,
-                )
-              }
+              excalidrawAPI={handleExcalidrawApi}
+              onChange={handleExcalidrawChange}
             />
           ) : null}
 
@@ -366,6 +373,7 @@ export function EditorPage() {
             void handleJudge();
           }}
           onViewReport={() => recording.setShowJudgeReport(true)}
+          onRetryTranscription={(session) => recording.retryTranscription(session)}
           judgeReport={recording.judgeReport}
           judgeStatus={recording.judgeStatus}
           enableJudge={settings.enableJudge}
@@ -384,6 +392,7 @@ export function EditorPage() {
           open={questionDialogOpen}
           onOpenChange={setQuestionDialogOpen}
           isGenerating={questionGenStatus.state === "generating"}
+          error={questionGenStatus.state === "error" ? questionGenStatus.error : undefined}
           onGenerate={handleConfirmGenerate}
         />
 

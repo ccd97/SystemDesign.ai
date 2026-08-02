@@ -1,6 +1,6 @@
 {
   "name": "system-design-ai",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Desktop app for recording Excalidraw interactions.",
   "private": true,
   "type": "module",

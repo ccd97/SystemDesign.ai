@@ -12,6 +12,7 @@ import type { RecordingSession } from "../../features/recorder";
 import type { TranscriptionStatus } from "../../features/recorder";
 import { runTranscription } from "../../features/recorder";
 import { persistTranscription } from "../../features/recorder";
+import { loadAudioBlob } from "../../features/recorder";
 import type { ExcalidrawElementData } from "../../shared/types";
 
 type SceneState = {
@@ -120,7 +121,6 @@ export function useRecordingProcess(options: RecordingProcessOptions) {
             session.audioBlob,
             session.sessionId,
             setTranscriptionStatus,
-            session.audioChunks,
           )
             .then(async (segments) => {
               await persistTranscription(session.canvasId, session.sessionId, segments);
@@ -164,12 +164,57 @@ export function useRecordingProcess(options: RecordingProcessOptions) {
     [openRouterApiKey, smartModel],
   );
 
+  const retryTranscription = useCallback(
+    async (session: RecordingSession) => {
+      if (!session.hasAudio) return;
+      if (!geminiApiKey) {
+        setTranscriptionStatus({
+          state: "error",
+          sessionId: session.sessionId,
+          error: "Gemini API key is required for audio transcription. Please configure it in Settings.",
+        });
+        return;
+      }
+      const blob = await loadAudioBlob(session.canvasId, session.sessionId, session.audioMimeType);
+      if (!blob) {
+        setTranscriptionStatus({
+          state: "error",
+          sessionId: session.sessionId,
+          error: "Audio file could not be found for this session.",
+        });
+        return;
+      }
+      try {
+        const segments = await runTranscription(
+          geminiApiKey,
+          audioModel,
+          blob,
+          session.sessionId,
+          setTranscriptionStatus,
+        );
+        await persistTranscription(session.canvasId, session.sessionId, segments);
+        await refreshRecordings(session.canvasId);
+        const updated = await loadRecording(session.canvasId, session.sessionId);
+        setLastSession((prev) =>
+          prev?.sessionId === session.sessionId ? updated : prev,
+        );
+        setSelectedRecording((prev) =>
+          prev?.sessionId === session.sessionId ? updated : prev,
+        );
+      } catch (err) {
+        console.error("Transcription retry failed:", err);
+        setTranscriptionStatus({
+          state: "error",
+          sessionId: session.sessionId,
+          error: err instanceof Error ? err.message : "Failed to save transcription",
+        });
+      }
+    },
+    [geminiApiKey, audioModel, refreshRecordings, setSelectedRecording, setTranscriptionStatus, setLastSession],
+  );
+
   const recordChange = useCallback((scene: SceneState) => {
     recorderRef.current.recordChange(scene);
-  }, []);
-
-  const setBaseline = useCallback((scene: SceneState) => {
-    recorderRef.current.setBaseline(scene);
   }, []);
 
   const recordCustomEvent = useCallback((action: Parameters<Recorder["recordCustomEvent"]>[0], summary: string) => {
@@ -194,8 +239,8 @@ export function useRecordingProcess(options: RecordingProcessOptions) {
     resumeRecording,
     stopRecording,
     runJudgeEvaluation,
+    retryTranscription,
     recordChange,
-    setBaseline,
     recordCustomEvent,
   };
 }

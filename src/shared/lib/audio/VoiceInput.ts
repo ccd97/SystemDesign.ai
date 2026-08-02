@@ -94,7 +94,7 @@ export class VoiceInput {
           settled = true;
           resolve();
         },
-        onTranscript: (text) => {
+        onInputTranscript: (text) => {
           this.liveTranscript += text;
           if (this.liveDebounce) {
             clearTimeout(this.liveDebounce);

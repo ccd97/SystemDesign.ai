@@ -125,10 +125,13 @@ export function useCanvasProcess(options?: CanvasProcessOptions) {
 
   const handleCreateCanvas = useCallback(
     async (name: string) => {
-      const canvas = await createCanvas(name);
-      await flushSave();
-      setNameDialog(undefined);
-      await openCanvas(canvas.id);
+      try {
+        const canvas = await createCanvas(name);
+        await flushSave();
+        await openCanvas(canvas.id);
+      } finally {
+        setNameDialog(undefined);
+      }
     },
     [flushSave, openCanvas],
   );
@@ -136,9 +139,12 @@ export function useCanvasProcess(options?: CanvasProcessOptions) {
   const handleRenameCanvas = useCallback(
     async (name: string) => {
       if (!nameDialog || nameDialog.mode !== "rename") return;
-      await renameCanvas(nameDialog.canvas.id, name);
-      setNameDialog(undefined);
-      await refreshCanvases();
+      try {
+        await renameCanvas(nameDialog.canvas.id, name);
+        await refreshCanvases();
+      } finally {
+        setNameDialog(undefined);
+      }
     },
     [nameDialog, refreshCanvases],
   );
@@ -186,12 +192,15 @@ export function useCanvasProcess(options?: CanvasProcessOptions) {
 
   const confirmSwitch = useCallback(async () => {
     if (!pendingSwitch) return;
-    if (isRecording && stopRecording) {
-      await stopRecording(sceneRef.current);
+    try {
+      if (isRecording && stopRecording) {
+        await stopRecording(sceneRef.current);
+      }
+      await flushSave();
+      await openCanvas(pendingSwitch.id);
+    } finally {
+      setPendingSwitch(undefined);
     }
-    await flushSave();
-    await openCanvas(pendingSwitch.id);
-    setPendingSwitch(undefined);
   }, [pendingSwitch, isRecording, flushSave, openCanvas, stopRecording]);
 
   const boot = useCallback(async () => {

@@ -5,6 +5,7 @@ export type Settings = {
   smartModel: string;
   fastModel: string;
   enableAudioRecording: boolean;
+  enableAudioTranscription: boolean;
   enableJudge: boolean;
   enableQuestionGen: boolean;
   enableChatbot: boolean;
@@ -13,10 +14,11 @@ export type Settings = {
 export const defaultSettings: Settings = {
   openRouterApiKey: "",
   geminiApiKey: "",
-  audioModel: "gemini-2.5-flash",
-  smartModel: "openai/gpt-4o",
-  fastModel: "openai/gpt-4o-mini",
+  audioModel: "gemini-3.1-flash-live-preview",
+  smartModel: "nvidia/nemotron-3-ultra-550b-a55b:free",
+  fastModel: "google/gemini-3.1-flash-lite",
   enableAudioRecording: true,
+  enableAudioTranscription: true,
   enableJudge: true,
   enableQuestionGen: true,
   enableChatbot: true,

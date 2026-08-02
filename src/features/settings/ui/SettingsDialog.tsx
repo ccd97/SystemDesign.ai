@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Cpu, Key, ToggleLeft } from "lucide-react";
+import { ErrorBanner } from "../../../shared/components/ErrorBanner";
 import { Button } from "../../../shared/components/ui/button";
 import {
   Dialog,
@@ -61,6 +62,13 @@ export function SettingsDialog({
         <DialogHeader>
           <DialogTitle>Settings</DialogTitle>
           <DialogDescription>Configure API keys, models, and feature toggles.</DialogDescription>
+          {errors.length > 0 && (
+            <ErrorBanner
+              message={
+                errors.length === 1 ? errors[0].message : "Please resolve the highlighted field errors below."
+              }
+            />
+          )}
         </DialogHeader>
 
         <section className="settings-section">
@@ -142,6 +150,14 @@ export function SettingsDialog({
             >
               <span className="settings-toggle-dot" />
               Audio Recording
+            </button>
+            <button
+              type="button"
+              className={`settings-toggle ${form.enableAudioTranscription ? "settings-toggle--on" : ""}`}
+              onClick={() => patch("enableAudioTranscription", !form.enableAudioTranscription)}
+            >
+              <span className="settings-toggle-dot" />
+              Audio Transcription
             </button>
             <button
               type="button"

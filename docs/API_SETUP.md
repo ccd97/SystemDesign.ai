@@ -37,6 +37,16 @@ Powers audio transcription (speech → text). Free tier is generous (1,500 reque
 
 ---
 
+## Recommended Free Setup
+
+<p>
+  <img src="../media/settings.png" alt="My Settings" />
+</p>
+
+This is what I personally use. All free models — no credits needed. Swap in whatever works for you.
+
+---
+
 ## Troubleshooting
 
 | Problem | Fix |

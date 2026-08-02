@@ -27,6 +27,8 @@ type RecordingSummary = {
   endedAt: string;
   durationMs: number;
   eventCount: number;
+  hasAudio?: boolean;
+  hasTranscription?: boolean;
 };
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -207,9 +209,9 @@ async function listRecordings(canvasId: string): Promise<RecordingSummary[]> {
   const results = await Promise.allSettled(
     entries
       .filter((entry) => entry.isFile() && entry.name.endsWith(".json") && !entry.name.includes(".judge."))
-      .map(async (entry) => {
+      .map(async (entry): Promise<RecordingSummary> => {
         const raw = await readFile(path.join(recordingsDir(canvasId), entry.name), "utf8");
-        const session = JSON.parse(raw) as RecordingSummary;
+        const session = JSON.parse(raw) as Record<string, any>;
         return {
           sessionId: session.sessionId,
           canvasId,
@@ -218,6 +220,8 @@ async function listRecordings(canvasId: string): Promise<RecordingSummary[]> {
           endedAt: session.endedAt,
           durationMs: session.durationMs,
           eventCount: session.eventCount,
+          hasAudio: session.hasAudio,
+          hasTranscription: Boolean(session.transcription && session.transcription.length > 0),
         };
       }),
   );

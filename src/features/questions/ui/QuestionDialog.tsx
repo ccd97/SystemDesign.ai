@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { domains } from "../api/generateQuestion";
+import { ErrorBanner } from "../../../shared/components/ErrorBanner";
 import { Button } from "../../../shared/components/ui/button";
 import {
   Dialog,
@@ -15,6 +16,7 @@ type QuestionDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   isGenerating: boolean;
+  error?: string;
   onGenerate: (domain: string | null, context: string) => void;
 };
 
@@ -22,6 +24,7 @@ export function QuestionDialog({
   open,
   onOpenChange,
   isGenerating,
+  error,
   onGenerate,
 }: QuestionDialogProps) {
   const [selectedDomain, setSelectedDomain] = useState<string>("random");
@@ -42,6 +45,7 @@ export function QuestionDialog({
             <DialogDescription>
               Choose a domain or let the AI pick randomly. Add optional context to guide the question.
             </DialogDescription>
+            {error && <ErrorBanner message={error} />}
           </DialogHeader>
 
           <label className="field-label">

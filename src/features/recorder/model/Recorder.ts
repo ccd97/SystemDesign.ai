@@ -32,7 +32,6 @@ const SNAPSHOT_INTERVAL = 10;
 
 const RECORDING_SCHEMA_VERSION = "1.3";
 
-
 const makeId = () =>
   globalThis.crypto?.randomUUID?.() ?? `session-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
@@ -42,8 +41,6 @@ function snapshot(scene: SceneInput): SceneSnapshot {
     appState: scene.appState,
   };
 }
-
-
 
 function sanitizeRecordingValue(value: unknown): unknown {
   if (Array.isArray(value)) {
@@ -167,37 +164,67 @@ function compactSceneElements(elements: readonly ExcalidrawElementData[]): Excal
 }
 
 function compactEvents(events: InternalInteractionEvent[]): InteractionEvent[] {
-  return events.map((event, index) => {
-      const { changes: _changes, snapshot, ...recordedEvent } = event;
-      const seq = index + 1;
-      const shouldKeepSnapshot = seq === 1 || seq % SNAPSHOT_INTERVAL === 0;
+  const EPHEMERAL_WINDOW_MS = 2000;
+  const created = new Map<string, { index: number; elapsedMs: number; hadText: boolean }>();
+  const removed = new Set<number>();
 
-      return {
-        ...recordedEvent,
-        seq,
-        ...(shouldKeepSnapshot && snapshot
-          ? { snapshot: sanitizeRecordingValue(snapshot) as Record<string, unknown> }
-          : {}),
-      };
-    });
+  for (let i = 0; i < events.length; i++) {
+    const event = events[i];
+
+    if (event.action === "element_created" && event.elementId) {
+      const text = String(event.snapshot?.text ?? "");
+      created.set(event.elementId, {
+        index: i,
+        elapsedMs: event.elapsedMs,
+        hadText: text.length > 0,
+      });
+      continue;
+    }
+
+    if (event.action === "text_edited" && event.elementId) {
+      const info = created.get(event.elementId);
+      if (info) {
+        info.hadText = true;
+      }
+      continue;
+    }
+
+    if (event.action === "element_deleted" && event.elementId) {
+      const info = created.get(event.elementId);
+      if (
+        info &&
+        !info.hadText &&
+        event.elapsedMs - info.elapsedMs <= EPHEMERAL_WINDOW_MS
+      ) {
+        removed.add(info.index);
+        removed.add(i);
+      }
+      created.delete(event.elementId);
+      continue;
+    }
+  }
+
+  const filtered = events.filter((_, i) => !removed.has(i));
+
+  return filtered.map((event, index) => {
+    const { changes: _changes, snapshot, ...recordedEvent } = event;
+    const seq = index + 1;
+    const shouldKeepSnapshot = seq === 1 || seq % SNAPSHOT_INTERVAL === 0;
+
+    return {
+      ...recordedEvent,
+      seq,
+      ...(shouldKeepSnapshot && snapshot
+        ? { snapshot: sanitizeRecordingValue(snapshot) as Record<string, unknown> }
+        : {}),
+    };
+  });
 }
 
 export class Recorder {
   private activeSession?: ActiveSession;
   private previousSnapshot?: SceneSnapshot;
   private audioRecorder = new AudioRecorder();
-
-  get isRecording() {
-    return Boolean(this.activeSession);
-  }
-
-  get isPaused() {
-    return Boolean(this.activeSession?.pausedAtMs);
-  }
-
-  get eventCount() {
-    return this.activeSession?.events.length ?? 0;
-  }
 
   get startedAtMs() {
     return this.activeSession?.startedAtMs;
@@ -207,10 +234,6 @@ export class Recorder {
     if (!this.activeSession) return 0;
     const currentPauseMs = this.activeSession.pausedAtMs ? Date.now() - this.activeSession.pausedAtMs : 0;
     return this.activeSession.totalPausedMs + currentPauseMs;
-  }
-
-  setBaseline(scene: SceneInput) {
-    this.previousSnapshot = snapshot(scene);
   }
 
   async start(canvasId: string, canvasName: string, scene: SceneInput, enableAudio = false, question?: string) {

@@ -1,11 +1,18 @@
 const WS_BASE = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent";
 
 type GeminiLiveClientEvents = {
-  onSetupComplete: () => void;
-  onTranscript: (text: string, isFinal: boolean) => void;
-  onTurnComplete: () => void;
-  onError: (error: string) => void;
-  onClose: () => void;
+  onSetupComplete?: () => void;
+  onTranscript?: (text: string, isFinal: boolean) => void;
+  onInputTranscript?: (text: string, isFinal: boolean) => void;
+  onModelTranscript?: (text: string, isFinal: boolean) => void;
+  onTurnComplete?: () => void;
+  onError?: (error: string) => void;
+  onClose?: () => void;
+};
+
+type GeminiLiveClientOptions = {
+  responseModalities?: ("TEXT" | "AUDIO")[];
+  systemInstruction?: string;
 };
 
 export class GeminiLiveClient {
@@ -13,12 +20,19 @@ export class GeminiLiveClient {
   private apiKey: string;
   private model: string;
   private events: GeminiLiveClientEvents;
+  private options: GeminiLiveClientOptions;
   private setupComplete = false;
 
-  constructor(apiKey: string, model: string, events: GeminiLiveClientEvents) {
+  constructor(
+    apiKey: string,
+    model: string,
+    events: GeminiLiveClientEvents,
+    options: GeminiLiveClientOptions = {},
+  ) {
     this.apiKey = apiKey;
     this.model = model;
     this.events = events;
+    this.options = options;
   }
 
   connect(): void {
@@ -33,12 +47,12 @@ export class GeminiLiveClient {
     };
 
     this.ws.onerror = () => {
-      this.events.onError("WebSocket connection error");
+      this.events.onError?.("WebSocket connection error");
     };
 
     this.ws.onclose = () => {
       this.setupComplete = false;
-      this.events.onClose();
+      this.events.onClose?.();
     };
   }
 
@@ -62,6 +76,29 @@ export class GeminiLiveClient {
     }));
   }
 
+  sendTurn(text: string, base64PCM: string): void {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.setupComplete) return;
+    this.ws.send(JSON.stringify({
+      clientContent: {
+        turns: [
+          {
+            role: "user",
+            parts: [
+              { text },
+              {
+                inlineData: {
+                  mimeType: "audio/pcm;rate=16000",
+                  data: base64PCM,
+                }
+              }
+            ],
+          },
+        ],
+        turnComplete: true,
+      },
+    }));
+  }
+
   sendTurnComplete(): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN || !this.setupComplete) return;
     this.ws.send(JSON.stringify({
@@ -74,14 +111,16 @@ export class GeminiLiveClient {
 
   private sendSetup(): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    const systemText = this.options.systemInstruction ?? "Transcribe the user's speech exactly as they say it. Output only the transcription with no additional text.";
+
     this.ws.send(JSON.stringify({
       setup: {
         model: `models/${this.model}`,
         generationConfig: {
-          responseModalities: ["AUDIO"],
+          responseModalities: this.options.responseModalities ?? ["AUDIO"],
         },
         systemInstruction: {
-          parts: [{ text: "Transcribe the user's speech exactly as they say it. Output only the transcription with no additional text." }],
+          parts: [{ text: systemText }],
         },
         inputAudioTranscription: {},
       },
@@ -107,13 +146,13 @@ export class GeminiLiveClient {
 
     if (data.setupComplete) {
       this.setupComplete = true;
-      this.events.onSetupComplete();
+      this.events.onSetupComplete?.();
       return;
     }
 
     if (data.error) {
       const err = data.error as { message?: string };
-      this.events.onError(err.message ?? "Unknown Live API error");
+      this.events.onError?.(err.message ?? "Unknown Live API error");
       return;
     }
 
@@ -122,11 +161,26 @@ export class GeminiLiveClient {
 
     const inputTranscription = serverContent.inputTranscription as { text?: string; finished?: boolean } | undefined;
     if (inputTranscription?.text) {
-      this.events.onTranscript(inputTranscription.text, inputTranscription.finished ?? false);
+      this.events.onInputTranscript?.(inputTranscription.text, inputTranscription.finished ?? false);
+      this.events.onTranscript?.(inputTranscription.text, inputTranscription.finished ?? false);
+    }
+
+    const outputTranscription = serverContent.outputTranscription as { text?: string } | undefined;
+    if (outputTranscription?.text) {
+      this.events.onModelTranscript?.(outputTranscription.text, false);
+    }
+
+    const modelTurn = serverContent.modelTurn as { parts?: Array<{ text?: string }> } | undefined;
+    if (modelTurn?.parts) {
+      for (const part of modelTurn.parts) {
+        if (part.text) {
+          this.events.onModelTranscript?.(part.text, false);
+        }
+      }
     }
 
     if (serverContent.turnComplete || serverContent.waitingForInput) {
-      this.events.onTurnComplete();
+      this.events.onTurnComplete?.();
     }
   }
 }

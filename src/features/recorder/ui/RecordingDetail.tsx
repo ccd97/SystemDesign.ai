@@ -1,10 +1,11 @@
 import { formatDuration } from "../../../shared/utils/utils";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Activity, AlertCircle, CheckCircle2, Copy, Download, Loader2, Maximize2, Pause, Play, Scale, Trash2, X } from "lucide-react";
+import { Activity, AlertCircle, CheckCircle2, Copy, Download, Loader2, Maximize2, Pause, Play, RefreshCw, Scale, Trash2, X } from "lucide-react";
 import { exportToCanvas, restoreElements } from "@excalidraw/excalidraw";
 import { deleteRecording, loadAudioBlob, recordingFilename, sessionToJson } from "../model/RecordingStore";
 import type { JudgeReport, JudgeStatus, RecordingSession } from "../../../entities/recording";
 import type { TranscriptionStatus } from "../model/TranscriptionJob";
+import { ErrorBanner } from "../../../shared/components/ErrorBanner";
 import { Badge } from "../../../shared/components/ui/badge";
 import { Button } from "../../../shared/components/ui/button";
 import {
@@ -23,6 +24,7 @@ type RecordingDetailProps = {
   onDeleted: (session: RecordingSession) => void | Promise<void>;
   onJudge?: (session: RecordingSession) => void;
   onViewReport?: () => void;
+  onRetryTranscription?: (session: RecordingSession) => void;
   judgeReport?: JudgeReport;
   judgeStatus?: JudgeStatus;
   enableJudge?: boolean;
@@ -137,6 +139,13 @@ function AudioPlayer({ audioUrl, onTimeUpdate, duration: knownDuration }: { audi
 
   const progressPct = duration > 0 ? (currentTime / duration) * 100 : 0;
 
+  const handleDownload = useCallback(() => {
+    const a = document.createElement("a");
+    a.href = audioUrl;
+    a.download = "recording.webm";
+    a.click();
+  }, [audioUrl]);
+
   return (
     <div className="audio-player">
       <audio ref={audioRef} src={audioUrl} preload="metadata" key={audioUrl} />
@@ -164,6 +173,17 @@ function AudioPlayer({ audioUrl, onTimeUpdate, duration: knownDuration }: { audi
       <span className="audio-player-time">
         {formatTime(currentTime)} / {formatTime(duration)}
       </span>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={handleDownload}
+        aria-label="Download audio"
+        title="Download audio"
+        className="audio-player-download"
+      >
+        <Download size={16} aria-hidden="true" />
+      </Button>
     </div>
   );
 }
@@ -174,6 +194,7 @@ export function RecordingDetail({
   onDeleted,
   onJudge,
   onViewReport,
+  onRetryTranscription,
   judgeReport,
   judgeStatus,
   enableJudge,
@@ -349,6 +370,72 @@ export function RecordingDetail({
     }
   }, [activeEventSeq]);
 
+  const transcriptionBadge = useMemo(() => {
+    if (!session.hasAudio) return null;
+
+    const isRunningForThisSession = transcriptionStatus?.state === "running" && transcriptionStatus.sessionId === session.sessionId;
+    const isErroredForThisSession = transcriptionStatus?.state === "error" && transcriptionStatus.sessionId === session.sessionId;
+    const isTranscribed = Boolean(session.transcription && session.transcription.length > 0);
+
+    if (isTranscribed) {
+      return (
+        <Badge variant="secondary" className="transcribing-badge">
+          <CheckCircle2 size={13} strokeWidth={2.5} className="transcription-check" />
+          Audio Transcribed
+        </Badge>
+      );
+    }
+    if (isRunningForThisSession) {
+      return (
+        <Badge variant="secondary" className="transcribing-badge">
+          <Loader2 className="spin" size={12} />
+          Transcribing audio...
+        </Badge>
+      );
+    }
+    if (isErroredForThisSession) {
+      return (
+        <>
+          <Badge variant="destructive" className="transcribing-badge">
+            <AlertCircle size={12} />
+            Transcription failed
+          </Badge>
+          {onRetryTranscription && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="transcription-retry-btn"
+              onClick={() => onRetryTranscription(session)}
+            >
+              <RefreshCw size={12} />
+              Retry
+            </Button>
+          )}
+        </>
+      );
+    }
+    return (
+      <>
+        <Badge variant="outline" className="transcribing-badge">
+          Not Transcribed
+        </Badge>
+        {onRetryTranscription && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="transcription-retry-btn"
+            onClick={() => onRetryTranscription(session)}
+          >
+            <RefreshCw size={12} />
+            Transcribe
+          </Button>
+        )}
+      </>
+    );
+  }, [session, transcriptionStatus, onRetryTranscription]);
+
   return (
     <>
       <Dialog
@@ -361,74 +448,61 @@ export function RecordingDetail({
     >
       <DialogContent className="recording-detail" showClose={false}>
         <DialogHeader className="recording-detail-header">
-          {snapshotUrl ? (
-            <button
-              type="button"
-              className="header-snapshot-thumbnail"
-              onClick={() => setShowSnapshotDialog(true)}
-              title="Click to view full final snapshot"
-              aria-label="View full final snapshot"
-            >
-              <img
-                src={snapshotUrl}
-                alt="Final Canvas Thumbnail"
-                className="snapshot-img"
-              />
-              <div className="thumbnail-overlay" />
-              <div className="thumbnail-badge">
-                <Maximize2 size={8} />
-                <span>Zoom</span>
+          <div className="recording-detail-header-top">
+            {snapshotUrl ? (
+              <button
+                type="button"
+                className="header-snapshot-thumbnail"
+                onClick={() => setShowSnapshotDialog(true)}
+                title="Click to view full final snapshot"
+                aria-label="View full final snapshot"
+              >
+                <img
+                  src={snapshotUrl}
+                  alt="Final Canvas Thumbnail"
+                  className="snapshot-img"
+                />
+                <div className="thumbnail-overlay" />
+                <div className="thumbnail-badge">
+                  <Maximize2 size={8} />
+                  <span>Zoom</span>
+                </div>
+              </button>
+            ) : generatingSnapshot ? (
+              <div className="header-snapshot-thumbnail is-loading" title="Generating snapshot...">
+                <Loader2 className="spin" size={14} />
               </div>
-            </button>
-          ) : generatingSnapshot ? (
-            <div className="header-snapshot-thumbnail is-loading" title="Generating snapshot...">
-              <Loader2 className="spin" size={14} />
-            </div>
-          ) : null}
+            ) : null}
 
-          <div className="header-info">
-            <p className="eyebrow">Recording</p>
-            <DialogTitle>{session.canvasName}</DialogTitle>
-            <DialogDescription className="sr-only">
-              Recorded interaction details for {session.canvasName}.
-            </DialogDescription>
-            <div className="detail-meta">
-              <span>{new Date(session.startedAt).toLocaleString()}</span>
-              <span>{formatDuration(session.durationMs)}</span>
-              <Badge variant="secondary">{session.eventCount} events</Badge>
-              {session.hasAudio && (
-                <>
-                  {transcriptionStatus?.state === "running" || (!session.transcription && !transcriptionStatus) ? (
-                    <Badge variant="secondary" className="transcribing-badge">
-                      <Loader2 className="spin" size={12} />
-                      Transcribing audio...
-                    </Badge>
-                  ) : transcriptionStatus?.state === "error" ? (
-                    <Badge variant="destructive" className="transcribing-badge">
-                      <AlertCircle size={12} />
-                      Transcription failed
-                    </Badge>
-                  ) : session.transcription ? (
-                    <Badge variant="secondary" className="transcribing-badge">
-                      <CheckCircle2 size={13} strokeWidth={2.5} className="transcription-check" />
-                      Audio Transcribed
-                    </Badge>
-                  ) : null}
-                </>
-              )}
+            <div className="header-info">
+              <p className="eyebrow">Recording</p>
+              <DialogTitle>{session.canvasName}</DialogTitle>
+              <DialogDescription className="sr-only">
+                Recorded interaction details for {session.canvasName}.
+              </DialogDescription>
+              <div className="detail-meta">
+                <span>{new Date(session.startedAt).toLocaleString()}</span>
+                <span>{formatDuration(session.durationMs)}</span>
+                <Badge variant="secondary">{session.eventCount} events</Badge>
+                {transcriptionBadge}
+              </div>
             </div>
+
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              aria-label="Close recording details"
+              title="Close"
+            >
+              <X aria-hidden="true" size={16} />
+            </Button>
           </div>
 
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            aria-label="Close recording details"
-            title="Close"
-          >
-            <X aria-hidden="true" size={16} />
-          </Button>
+          {transcriptionStatus?.state === "error" && transcriptionStatus.sessionId === session.sessionId && (
+            <ErrorBanner message={transcriptionStatus.error} />
+          )}
         </DialogHeader>
 
         <div className="recording-detail-body">

@@ -1,17 +1,17 @@
 <p align="center">
-  <img src="https://excalidraw.com/apple-touch-icon.png" width="80" alt="SystemDesign.ai" />
+  <img src="./media/icon.png" width="128" alt="SystemDesign.ai" />
 </p>
 
 <h1 align="center">SystemDesign.ai</h1>
 
 <p align="center">
-  <strong>AI-powered system design interview simulator.<br/>Draw. Explain. Get scored — completely free.</strong>
+  <strong>AI-powered system design mock interviewer.<br/>Draw. Explain. Get scored — completely free.</strong>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux-blue?style=flat-square" alt="Platforms" />
-  <img src="https://img.shields.io/badge/cost-100%25%20free%20possible-brightgreen?style=flat-square" alt="Free" />
-  <img src="https://img.shields.io/badge/AI-OpenRouter%20%2B%20Gemini-orange?style=flat-square" alt="AI" />
+  <img src="https://img.shields.io/badge/TypeScript-5.9-blue?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/github/v/release/ccd97/SystemDesign.ai?style=flat-square" alt="Latest Release" />
+  <img src="https://img.shields.io/github/stars/ccd97/SystemDesign.ai?style=flat-square" alt="Stars" />
   <img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="License" />
 </p>
 
@@ -19,7 +19,7 @@
 
 An Electron desktop app that turns [Excalidraw](https://excalidraw.com) into a full system design interview practice tool. An AI interviewer asks you realistic questions, you draw and explain your architecture on the canvas, and an AI judge scores your performance across 7 dimensions — all locally, all private.
 
-**Use it 100% free** with open-source models on OpenRouter and Google AI Studio's free tier. No subscriptions, no sign-ups beyond the API keys.
+**Use it 100% free (unlimited)** with free models on OpenRouter and Google AI Studio's. No subscriptions, no sign-ups beyond the API keys.
 
 ---
 
@@ -34,7 +34,7 @@ The generated question is placed directly on your Excalidraw canvas as a text el
 You can optionally provide context or hints to steer the question in a specific direction, or let the AI pick a domain at random.
 
 <p align="center">
-  <img src="https://placehold.co/800x450/1a1a2e/e0e0e0?text=Screenshot%3A+Question+Generator+Dialog+%26+Canvas&font=inter" alt="Question Generator" />
+  <img src="./media/question-gen.gif" alt="Question Generator" />
   <br/><sub>AI-generated interview question placed directly on the canvas</sub>
 </p>
 
@@ -53,7 +53,7 @@ Pause and resume at any time. Each session is saved locally with a compact JSON 
 After you stop recording, your audio is **automatically transcribed** using Google Gemini. Speech is broken into natural segments with timestamps and merged into your event timeline — so you can see exactly what you said while drawing each component.
 
 <p align="center">
-  <img src="https://placehold.co/800x450/1a1a2e/e0e0e0?text=Screenshot%3A+Recording+In+Progress&font=inter" alt="Recording in progress" />
+  <img src="./media/recording.gif" alt="Recording in progress" />
   <br/><sub>Recording toolbar with timer, pause/resume, and stop controls</sub>
 </p>
 
@@ -69,10 +69,10 @@ A simulated interviewer that sits alongside your canvas in a chat panel. It beha
 >
 > *"Should I use SQL or NoSQL?"* → *"That's a design decision for you to make. What trade-offs are you considering?"*
 
-Supports both **text and voice input**. Use the microphone button to speak your question — it's transcribed in real time and sent to the interviewer. The full conversation is saved as part of your recording session.
+Supports both **text and voice input**. Use the microphone button to speak your question — it's transcribed in real time and sent to the interviewer. Voice input supports two modes: fast **Gemini Live** (WebSocket streaming for low-latency real-time transcription) and fallback **REST** transcription. The full conversation is saved as part of your recording session.
 
 <p align="center">
-  <img src="https://placehold.co/800x450/1a1a2e/e0e0e0?text=Screenshot%3A+Interviewer+Chatbot+Panel&font=inter" alt="Interviewer Chatbot" />
+  <img src="./media/chatbot.gif" alt="Interviewer Chatbot" />
   <br/><sub>AI interviewer chat with voice input — ask clarifying questions just like a real interview</sub>
 </p>
 
@@ -95,7 +95,7 @@ Open any recording and run the **AI Judge** to get a detailed evaluation report.
 Each dimension gets a **1–5 score** with specific observations referencing your actual drawing and speech. The report also includes an **overall score**, top 3 strengths, and top 3 areas for improvement.
 
 <p align="center">
-  <img src="https://placehold.co/800x450/1a1a2e/e0e0e0?text=Screenshot%3A+AI+Judge+Report&font=inter" alt="AI Judge Report" />
+  <img src="./media/judge-report.gif" alt="AI Judge Report" />
   <br/><sub>Detailed judge report with per-dimension scores, strengths, and improvements</sub>
 </p>
 
@@ -112,7 +112,7 @@ Open any past recording from the sidebar to review your performance in detail:
 - **Export** — copy session JSON to clipboard or download as a file
 
 <p align="center">
-  <img src="https://placehold.co/800x450/1a1a2e/e0e0e0?text=Screenshot%3A+Recording+Detail+with+Audio+Playback&font=inter" alt="Recording Detail" />
+  <img src="./media/playback.gif" alt="Recording Detail" />
   <br/><sub>Recording review with audio playback synced to the event timeline</sub>
 </p>
 
@@ -216,9 +216,9 @@ All settings are accessible from the **Settings** dialog (⚙️):
 ### Models
 | Model Slot | Default | Purpose |
 |---|---|---|
-| Audio Model | `gemini-2.5-flash` | Audio → text transcription via Google AI |
-| Smart Model | `openai/gpt-4o` | Judge evaluation (needs strong reasoning) |
-| Fast Model | `openai/gpt-4o-mini` | Question gen & chatbot (speed matters) |
+| Audio Model | `gemini-3.1-flash-live-preview` | Audio → text transcription via Google AI |
+| Smart Model | `nvidia/nemotron-3-ultra-550b-a55b:free` | Judge evaluation (needs strong reasoning) |
+| Fast Model | `google/gemini-3.1-flash-lite` | Question gen & chatbot (speed matters) |
 
 > 💡 You can swap in **any model** available on OpenRouter — including free open-source models like Llama and Gemma. Browse models at [openrouter.ai/models](https://openrouter.ai/models).
 
@@ -226,6 +226,7 @@ All settings are accessible from the **Settings** dialog (⚙️):
 | Feature | Default |
 |---|---|
 | Audio Recording | ✅ On |
+| Audio Transcription | ✅ On |
 | Judge | ✅ On |
 | Question Generation | ✅ On |
 | Chatbot | ✅ On |
@@ -239,36 +240,41 @@ Toggle any feature on/off based on your needs.
 ### Build Commands
 
 ```bash
+npm run dev           # Dev server + Electron
+npm run build         # TypeScript compile + Vite production build
 npm run dist:mac      # macOS → release/*.dmg + .zip
 npm run dist:linux    # Linux → release/*.AppImage + .tar.xz
+npm run dist:win      # Windows → release/*.exe (NSIS installer + portable)
 ```
 
 ### Tech Stack
 
 - **Electron** — desktop shell
-- **React 18** + **TypeScript** — UI
+- **React 18** + **TypeScript** (strict) — UI
 - **Vite** — build tool
 - **Excalidraw** — canvas engine
 - **Radix UI** — accessible dialog & scroll components
 - **Lucide** — icons
+- **CVA** — component styling
 
 ### Project Structure
 
+Organized using [Feature-Sliced Design](https://feature-sliced.design/) architecture:
+
 ```
 src/
-├── chatbot/       # AI interviewer logic & prompts
-├── judge/         # AI scoring engine & prompts
-├── questions/     # Interview question generator
-├── recorder/      # Recording engine & audio capture
-├── gemini/        # Google AI transcription client
-├── openrouter/    # OpenRouter API client with retries
-├── canvas/        # Canvas CRUD & serialization
-├── settings/      # Settings management & validation
-├── components/    # React UI components
-└── App.tsx        # Main application shell
+├── app/           # Providers (Settings, Toast)
+├── entities/      # Domain types (canvas, chatbot, recording, settings)
+├── features/      # Feature modules (canvas, chatbot, judge, questions, recorder, settings)
+├── pages/         # EditorPage — main app view
+├── processes/     # Business logic hooks (canvas, chatbot, recording)
+├── shared/        # Components, lib (ai, audio, canvas, gemini), types, utils
+├── widgets/       # Composite blocks (Sidebar, Toolbar, ChatbotPanel, ToastContainer)
+├── styles.css     # All styles (single file)
+└── vite-env.d.ts  # Window API type declarations
 electron/
-├── main.ts        # Electron main process
-└── preload.ts     # Preload bridge
+├── main.ts        # Electron main process — all file I/O via IPC handlers
+└── preload.ts     # Context bridge — exposes canvasAPI, recordingAPI, settingsAPI, recorderAPI
 ```
 
 ---

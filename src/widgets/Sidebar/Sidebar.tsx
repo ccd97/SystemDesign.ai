@@ -5,6 +5,7 @@ import {
   Clock3,
   FileText,
   Layers3,
+  Mic,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -160,7 +161,11 @@ export function Sidebar({
                   onClick={() => onOpenRecording(recording)}
                 >
                   <span className="recording-icon">
-                    <FileText aria-hidden="true" size={14} />
+                    {recording.hasAudio ? (
+                      <Mic aria-hidden="true" size={14} />
+                    ) : (
+                      <FileText aria-hidden="true" size={14} />
+                    )}
                   </span>
                   <span className="recording-copy">
                     <span>{formatTime(recording.startedAt)}</span>

@@ -108,7 +108,7 @@ export function JudgeReportDialog({ report, canvasName, durationMs, question, on
           <section className="judge-section">
             <div className="judge-columns">
               <div className="judge-column judge-strengths">
-                <h3><CheckCircle2 size={13} className="inline-block align-middle mr-1.5 text-green-500" />Strengths</h3>
+                <h3><CheckCircle2 size={13} className="judge-icon" />Strengths</h3>
                 <ul>
                   {report.strengths.map((s, i) => (
                     <li key={i} className="judge-point">{s}</li>
@@ -116,7 +116,7 @@ export function JudgeReportDialog({ report, canvasName, durationMs, question, on
                 </ul>
               </div>
               <div className="judge-column judge-improvements">
-                <h3><TrendingUp size={13} className="inline-block align-middle mr-1.5 text-yellow-400" />Improvements</h3>
+                <h3><TrendingUp size={13} className="judge-icon" />Improvements</h3>
                 <ul>
                   {report.improvements.map((s, i) => (
                     <li key={i} className="judge-point">{s}</li>

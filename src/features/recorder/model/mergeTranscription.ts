@@ -6,15 +6,23 @@ function mergeTranscriptionIntoEvents(
   segments: TranscriptionSegment[],
   sessionStartedAt: string,
 ): InteractionEvent[] {
-  const speechEvents: InteractionEvent[] = segments.map((segment) => ({
-    seq: 0,
-    action: "speech" as const,
-    summary: segment.text,
-    elapsedMs: segment.startMs,
-    timestamp: new Date(new Date(sessionStartedAt).getTime() + segment.startMs).toISOString(),
-  }));
+  const validSegments = segments
+    .filter((s) => typeof s.startMs === "number" && !Number.isNaN(s.startMs))
+    .sort((a, b) => a.startMs - b.startMs);
 
-  const merged = [...events, ...speechEvents].sort(
+  const speechEvents: InteractionEvent[] = validSegments.map((segment) => {
+    const startMs = Math.max(0, Math.round(segment.startMs));
+    return {
+      seq: 0,
+      action: "speech" as const,
+      summary: segment.text,
+      elapsedMs: startMs,
+      timestamp: new Date(new Date(sessionStartedAt).getTime() + startMs).toISOString(),
+    };
+  });
+
+  const nonSpeechEvents = events.filter((e) => e.action !== "speech");
+  const merged = [...nonSpeechEvents, ...speechEvents].sort(
     (a, b) => (a.elapsedMs ?? 0) - (b.elapsedMs ?? 0),
   );
 
