@@ -18,7 +18,7 @@
 
 ---
 
-An Electron desktop app that turns [Excalidraw](https://excalidraw.com) into a full system design interview practice tool. An AI interviewer asks you realistic questions, you draw and explain your architecture on the canvas, and an AI judge scores your performance across 7 dimensions — all locally, all private.
+An Electron desktop app that turns [Excalidraw](https://excalidraw.com) into a full system design interview practice tool. An AI interviewer asks you realistic questions, you draw and explain your architecture on the canvas, and an AI judge scores your performance.
 
 **Use it 100% free (unlimited)** with free models on OpenRouter and Google AI Studio's. No subscriptions, no sign-ups beyond the API keys.
 
